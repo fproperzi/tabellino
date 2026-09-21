@@ -1,0 +1,56 @@
+name: Deploy demo pubblica
+
+# Pubblica una demo su InfinityFree a ogni push su main (e a comando, dal tab
+# Actions): equivalente "da GitHub" dell'hook post-commit locale usato per
+# www.rugbyassistant.org/tabellino, ma con due differenze volute.
+#
+# 1. Le credenziali vivono nei Secrets del repository (Settings -> Secrets
+#    and variables -> Actions: DEMO_FTP_SERVER, DEMO_FTP_USERNAME,
+#    DEMO_FTP_PASSWORD), mai nel codice: GitHub le inietta a runtime e le
+#    maschera nei log.
+# 2. Qui data/ NON è esclusa dal deploy: viene rigenerata da zero a ogni
+#    pubblicazione (vedi tools/seed_demo_data.php) con qualche utente non
+#    amministrativo e password nota, più la partita di prova già installata,
+#    così chi apre la demo vede subito qualcosa senza dover creare nulla.
+#    Sul sito vero (deploy locale) vale l'opposto: data/ non si tocca mai.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  deploy-demo:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Imposta PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: pdo_sqlite
+
+      - name: Genera partita di prova e utenti demo non amministrativi
+        run: php tools/seed_demo_data.php
+
+      - name: Pubblica su InfinityFree via FTP
+        uses: SamKirkland/FTP-Deploy-Action@v4.4.0
+        with:
+          server: ${{ secrets.DEMO_FTP_SERVER }}
+          username: ${{ secrets.DEMO_FTP_USERNAME }}
+          password: ${{ secrets.DEMO_FTP_PASSWORD }}
+          protocol: ftps
+          # Cartella pubblica di default su InfinityFree. Se il tuo account
+          # ne usa una diversa (dominio aggiuntivo, sottodominio...),
+          # verificala nel pannello FTP e aggiornala qui.
+          server-dir: /htdocs/
+          exclude: |
+            **/.git*
+            **/.git*/**
+            .github/**
+            .githooks/**
+            tools/**
+            deploy.ini
+            ripristina_demo.php
