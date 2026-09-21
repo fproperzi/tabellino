@@ -1,0 +1,23 @@
+# Seconda barriera, oltre a data/.htaccess (creato in automatico): nega
+# l'accesso via web a file di database/dati, a deploy.ini (credenziali FTP,
+# non deve mai finire qui comunque: è escluso dal deploy e da .gitignore) e
+# alle cartelle di git. Se manca mod_rewrite o mod_authz_core, Apache ignora
+# le regole che non capisce: nessun danno, resta solo senza questa barriera
+# in più (la cartella data/ è comunque protetta dal suo .htaccess).
+<FilesMatch "\.(sqlite|sqlite3|db|json)(-wal|-shm|-journal)?$">
+    <IfModule mod_authz_core.c>
+        Require all denied
+    </IfModule>
+    <IfModule !mod_authz_core.c>
+        Order allow,deny
+        Deny from all
+    </IfModule>
+</FilesMatch>
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteRule \.ini$ - [R=404,L]
+    RewriteRule ^\.git(hooks)?/ - [R=404,L]
+</IfModule>
+
+Options -Indexes

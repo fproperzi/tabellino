@@ -150,23 +150,7 @@ L'app crea automaticamente `data/.htaccess`, che su Apache nega ogni accesso via
 
 **Verifica consigliata:** aprendo `https://tuodominio/tabellino/data/users.json` il server deve rispondere **403 Forbidden**. Se invece vedi il contenuto del file, il tuo hosting non usa gli `.htaccess` (tipico di nginx): chiedi al provider di bloccare l'accesso alla cartella `data`.
 
-Come seconda barriera, facoltativa, nella cartella principale puoi creare `.htaccess`:
-
-```apache
-<FilesMatch "\.(sqlite|sqlite3|db|json)(-wal|-shm|-journal)?$">
-    <IfModule mod_authz_core.c>
-        Require all denied
-    </IfModule>
-    <IfModule !mod_authz_core.c>
-        Order allow,deny
-        Deny from all
-    </IfModule>
-</FilesMatch>
-
-Options -Indexes
-```
-
-Se `Options -Indexes` provoca un errore 500, togli quella riga.
+Come seconda barriera, il repository include già un `.htaccess` nella cartella principale che nega l'accesso via web a file di database/dati, a `deploy.ini` e alle cartelle di git, oltre a disattivare l'elenco delle cartelle. Se `Options -Indexes` provoca un errore 500 sul tuo hosting, togli quella riga.
 
 Chi gestisce il proprio server può spostare il database fuori dalla document root modificando `DB_PATH` in `db.php`; controlla che `open_basedir` includa il nuovo percorso.
 
@@ -359,7 +343,7 @@ tabellino/
 ├── logout.php            Uscita
 ├── demo.php              Dati della partita di prova, usati dal primo avvio e dal ripristino
 ├── ripristina_demo.php   Ripristino della partita di prova (da cancellare dopo l'uso)
-├── .htaccess             Facoltativo: blocca file di database e directory listing
+├── .htaccess             Blocca file di database/dati, deploy.ini, le cartelle di git, e la directory listing
 └── data/                 Creata in automatico, NON va nel repository
     ├── .htaccess         Creato in automatico, nega ogni accesso HTTP
     ├── users.json        Utenti e hash delle password

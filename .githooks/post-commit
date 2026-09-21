@@ -1,0 +1,131 @@
+#!/bin/sh
+# post-commit - deploy dei file su www.rugbyassistant.org/tabellino dopo ogni commit.
+#
+# Stesso meccanismo di f3ra (repo gemello, stesso hosting): le credenziali
+# NON stanno qui, vanno in deploy.ini nella root del progetto, che è in
+# .gitignore e viene bloccato via HTTP dalla regola \.ini$ di .htaccess.
+# Senza quel file il deploy viene saltato, non fallisce: così chi clona il
+# progetto può committare senza pubblicare nulla per sbaglio.
+#
+# Per attivarlo su un checkout nuovo: git config core.hooksPath .githooks
+
+ROOT=$(git rev-parse --show-toplevel)
+CONF="$ROOT/deploy.ini"
+
+if [ ! -f "$CONF" ]; then
+    echo "[ deploy ] deploy.ini assente: deploy saltato."
+    exit 0
+fi
+
+. "$CONF"
+
+if [ -z "$FTP_SERVER" ] || [ -z "$FTP_USER" ] || [ -z "$FTP_PASS" ] || [ -z "$FTP_REMOTE_DIR" ]; then
+    echo "[ deploy ] deploy.ini incompleto: deploy saltato."
+    exit 0
+fi
+
+cd "$ROOT" || exit 0
+
+# ── Cosa non va online ───────────────────────────────────────────────────────
+# data/ contiene il database vero, gli utenti e le sessioni della partita in
+# corso sul sito: un deploy che la sovrascrive non è un deploy, è un
+# ripristino travestito da pubblicazione. Chi deve aggiornare i dati remoti
+# lo fa a mano, sapendo quando lo sta facendo. Il resto (.git, .githooks,
+# deploy.ini) non deve mai finire pubblico.
+escluso() {
+    case "$1" in
+        .git/*|.githooks/*|data/*|deploy.ini) return 0 ;;
+        *" copy"*|*" - Copia"*) return 0 ;;
+        *) return 1 ;;
+    esac
+}
+
+# ── Impostazioni di trasporto ────────────────────────────────────────────────
+# ftps e non sftp: l'hosting non espone SFTP. Il canale dati resta in chiaro
+# (vedi il commento gemello in f3ra per il perché: con i dati cifrati questo
+# server tronca i trasferimenti senza segnalare errore). Il canale di
+# controllo resta cifrato, quindi le credenziali non viaggiano in chiaro.
+# Il certificato è intestato a ftplnx02.aruba.it e non al nostro host, da cui
+# la verifica disattivata.
+
+# ── Strada 1: lftp, se c'è (mirror completo con cancellazioni) ───────────────
+if command -v lftp >/dev/null 2>&1; then
+    echo "[ deploy ] lftp: sincronizzo su $FTP_SERVER$FTP_REMOTE_DIR..."
+
+    SETTINGS="set ssl:verify-certificate no; set ftp:ssl-protect-data no; set net:timeout 30; set net:max-retries 2"
+    EXCLUDE="-x '^\.git/' -x '^\.githooks/' -x '^data/' -x '^deploy\.ini\$' -x ' copy' -x ' - Copia'"
+
+    lftp -u "$FTP_USER","$FTP_PASS" -e "$SETTINGS; mirror -R --verbose $EXCLUDE ./ $FTP_REMOTE_DIR; bye" "ftps://$FTP_SERVER"
+    STATUS=$?
+
+    if [ $STATUS -ne 0 ]; then
+        echo "[ deploy ] ERRORE: lftp ha restituito $STATUS."
+        exit 0
+    fi
+
+    # I file nuovi nascono 750 sul server e il web server non li può leggere
+    # senza questo passaggio.
+    lftp -u "$FTP_USER","$FTP_PASS" -e "$SETTINGS; chmod -R 755 $FTP_REMOTE_DIR; bye" "ftps://$FTP_SERVER" >/dev/null 2>&1
+
+    echo "[ deploy ] Completato."
+    exit 0
+fi
+
+# ── Strada 2: curl ───────────────────────────────────────────────────────────
+if ! command -v curl >/dev/null 2>&1; then
+    echo "[ deploy ] né lftp né curl: deploy saltato."
+    exit 0
+fi
+
+# A regime i soli file toccati dal commit: il resto è già lì e ricaricarlo
+# costerebbe minuti a ogni commit. DEPLOY_FULL=1 li manda tutti (primo invio;
+# --others prende anche i file non ancora committati, così il primo invio si
+# può fare anche prima del primo commit).
+if [ "$DEPLOY_FULL" = "1" ]; then
+    FILES=$(git ls-files --cached --others --exclude-standard)
+else
+    FILES=$(git diff-tree --no-commit-id --name-only --diff-filter=ACMRT -r HEAD)
+fi
+
+if [ -z "$FILES" ]; then
+    echo "[ deploy ] niente da caricare."
+    exit 0
+fi
+
+echo "[ deploy ] curl: carico su $FTP_SERVER$FTP_REMOTE_DIR..."
+
+BASE="ftps://$FTP_SERVER$FTP_REMOTE_DIR"
+ARGS=""
+N=0
+OK=0
+BLOCCO=0
+
+invia() {
+    [ -z "$ARGS" ] && return 0
+    # shellcheck disable=SC2086
+    if curl --ftp-ssl-control --insecure --ftp-create-dirs -sS -u "$FTP_USER:$FTP_PASS" $ARGS; then
+        OK=$((OK + BLOCCO))
+    else
+        echo "[ deploy ] ERRORE durante il caricamento di un blocco."
+    fi
+    ARGS=""
+    BLOCCO=0
+}
+
+for f in $FILES; do
+    [ -f "$f" ] || continue
+    escluso "$f" && continue
+
+    ARGS="$ARGS -T $f $BASE/$f"
+    N=$((N + 1))
+    BLOCCO=$((BLOCCO + 1))
+
+    # A blocchi: una riga di comando lunga chilometri non passa, e una
+    # connessione sola per file sarebbe lentissima.
+    [ $BLOCCO -ge 60 ] && invia
+done
+invia
+
+echo "[ deploy ] $OK/$N file caricati."
+echo "[ deploy ] Completato."
+exit 0

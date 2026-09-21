@@ -1,2 +1,5 @@
 data/*
 !data/.htaccess
+
+# Credenziali di deploy FTP: mai versionate, bloccate anche via HTTP da .htaccess (\.ini$)
+deploy.ini
