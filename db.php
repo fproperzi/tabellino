@@ -22,6 +22,9 @@ const MIGRATIONS = [
         updated_at  TEXT NOT NULL
     )",
     2 => "ALTER TABLE matches ADD COLUMN owner TEXT NOT NULL DEFAULT ''",
+    3 => "ALTER TABLE matches ADD COLUMN created_at TEXT NOT NULL DEFAULT ''",
+    4 => "ALTER TABLE matches ADD COLUMN forked_from TEXT NOT NULL DEFAULT ''",
+    5 => "UPDATE matches SET created_at = updated_at WHERE created_at = ''",
 ];
 
 function db_connect(): PDO

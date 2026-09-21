@@ -4,7 +4,7 @@ Web app per telefono e tablet con cui si registrano, a bordo campo, gli eventi d
 
 Nasce per sostituire il foglio cartaceo: invece di mettere una crocetta sul punteggio, si tocca il numero del giocatore e l'app ricostruisce da sola marcatori con parziali, catene di sostituzioni, cartellini e percentuali dei calciatori.
 
-- Versione attuale: **v1.11**
+- Versione attuale: **v1.12**
 - Stack: HTML + JavaScript senza dipendenze, PHP 8.2+, SQLite
 - Funziona anche senza rete: i dati restano sul dispositivo e si inviano al server quando si vuole
 - Installazione con semplice copia dei file: utenti e password si creano dal browser
@@ -184,7 +184,8 @@ Chi gestisce il proprio server può spostare il database fuori dalla document ro
 
 - Ogni tabellino salvato sul server è legato a chi l'ha creato (`owner` nella tabella `matches`)
 - Solo il proprietario può sovrascriverlo: se un altro utente carica quel tabellino e lo salva, il server non tocca l'originale ma crea automaticamente una **copia** con un nuovo id, di cui l'utente diventa proprietario
-- L'app avvisa quando succede ("salvato come copia") e nell'elenco partite mostra di chi è ogni tabellino non tuo
+- L'app avvisa quando succede ("salvato come copia") e l'elenco partite (**Partita → Apri dal server**) mostra per ognuna: proprietario (sempre, non solo per le partite non tue), data di creazione, data di modifica (se diversa da quella di creazione) e l'etichetta **"copia"** quando è nata così
+- Ogni copia ricorda solo il suo genitore immediato (`forked_from`), non necessariamente l'originale: la copia di una copia punta alla copia, non risale da sola alla partita di partenza. Nell'elenco entrambe compaiono comunque, quindi restano distinguibili
 - Eccezione: i tabellini salvati prima di questa funzione, e quello di prova installato da `demo.php`, non hanno un proprietario e restano modificabili da chiunque (`owner` si assegna solo quando una riga viene creata, mai in un aggiornamento)
 
 ---
@@ -405,7 +406,9 @@ CREATE TABLE matches (
     match_date  TEXT,
     data        TEXT NOT NULL,     -- stato completo della partita in JSON
     owner       TEXT NOT NULL DEFAULT '',  -- utente che l'ha creata; '' = nessuno (libera per tutti)
-    updated_at  TEXT NOT NULL
+    created_at  TEXT NOT NULL DEFAULT '',  -- mai toccata dopo la creazione della riga
+    updated_at  TEXT NOT NULL,
+    forked_from TEXT NOT NULL DEFAULT ''   -- id del genitore immediato, solo se nata da una copia
 );
 ```
 
@@ -493,6 +496,7 @@ La partita di prova può essere caricata al primo avvio, lasciando la spunta nel
 
 | Versione | Novità |
 |---|---|
+| **v1.12** | L'elenco partite mostra sempre il proprietario (non solo per quelle non tue), la data di creazione oltre a quella di modifica, e un'etichetta "copia" per i tabellini nati da un salvataggio su una partita non tua — prima due partite con lo stesso titolo erano indistinguibili |
 | **v1.11** | Compatibilità estesa fino a PHP 7.4 (prima richiedeva 8.1 per un tipo di ritorno `never` in `api.php` e un `mixed` in `auth.php`; `str_contains`/`str_starts_with`, PHP 8.0+, sostituiti con `strpos()`), per chi ha un hosting con una versione di PHP meno recente |
 | **v1.10** | Esportazione e importazione delle partite in JSON; tasto "Modifica" unico sugli eventi (minuto, tempo e giocatore/i in un solo passaggio, incluso il rientro delle sostituzioni temporanee); grassetti sulle etichette del tabellino oltre ai corsivi già previsti dal modello FIR; menu utente ("Utenti e password", "Esci") spostato in un tasto flottante raggiungibile da ogni scheda; schema del database gestito con migrazioni numerate in `db.php` |
 | **v1.09** | Ogni tabellino appartiene a chi l'ha creato: se un altro utente lo salva, il server crea automaticamente una copia con nuovo id invece di sovrascrivere l'originale |

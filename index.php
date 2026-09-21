@@ -21,7 +21,7 @@ if (!empty($_SESSION['demo_installed'])) {
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#0a1628">
 <meta name="robots" content="noindex, nofollow">
-<title>Tabellino live v1.11</title>
+<title>Tabellino live v1.12</title>
 <style>
 :root {
     --bg: #0a1628;
@@ -480,6 +480,10 @@ function sanitizeClock(st, forcePause) {
     return st;
 }
 let S = sanitizeClock(migrate(load()), false) || newState();
+/* Invalida un "Apri dal server" ancora in corso se nel frattempo si importa un
+   JSON o si parte con una nuova partita: senza, la risposta in arrivo in ritardo
+   sovrascriverebbe in silenzio quello che l'utente ha fatto dopo. */
+let opSeq = 0;
 
 /* Preferenze del solo dispositivo (non vanno sul server): ognuno sceglie il proprio lato */
 const UI_KEY = 'tabellino_ui_v1';
@@ -1095,8 +1099,16 @@ async function serverList() {
         if (!j.ok) throw new Error(j.error);
         const d = $('#dlg');
         d.innerHTML = `<h3 style="margin:0 0 10px">Partite salvate</h3>
-            ${j.items.length ? j.items.map(it => `<button class="btn" style="width:100%;text-align:left;margin-bottom:6px" data-load="${esc(it.id)}">
-                ${esc(it.title)}<br><small class="hint">${esc(it.updated_at)}${it.mine ? '' : ' · di ' + esc(it.owner)}</small></button>`).join('') : '<p class="hint">Nessuna partita sul server.</p>'}
+            ${j.items.length ? j.items.map(it => {
+                const who = it.owner === '' ? 'libera per tutti' : (it.mine ? 'tua' : 'di ' + esc(it.owner));
+                const copia = it.forked_from ? ' · copia' : '';
+                const created = it.created_at || it.updated_at;
+                const dates = created !== it.updated_at
+                    ? `creata ${esc(created)} · modificata ${esc(it.updated_at)}`
+                    : `creata ${esc(created)}`;
+                return `<button class="btn" style="width:100%;text-align:left;margin-bottom:6px" data-load="${esc(it.id)}">
+                    ${esc(it.title)}<br><small class="hint">${who}${copia} · ${dates}</small></button>`;
+            }).join('') : '<p class="hint">Nessuna partita sul server.</p>'}
             <div class="btnrow" style="justify-content:flex-end"><button class="btn" id="dNo">Chiudi</button></div>`;
         $('#dlgOverlay').classList.add('on');
         $('#dNo').onclick = closeDlg;
@@ -1109,10 +1121,12 @@ async function serverList() {
     }
 }
 async function serverLoad(id) {
+    const my = ++opSeq;
     try {
         const r = await fetch(API_URL + '?action=load&id=' + encodeURIComponent(id) + '&nc=' + Date.now(), { cache: 'no-store' }).then(checkAuth);
         const j = await r.json();
         if (!j.ok) throw new Error(j.error);
+        if (my !== opSeq) return;  // nel frattempo è stata aperta un'altra partita, importato un JSON o iniziata una nuova
         S = sanitizeClock(migrate(j.data), true); save(); renderSetup(); renderAll();
         if (S._clockFixed) { delete S._clockFixed; save(); toast('Il cronometro era rimasto acceso: fermato al 40’'); }
         toast(j.mine ? 'Partita caricata' : 'Partita caricata: non è tua, salvando ne farai una copia');
@@ -1132,6 +1146,7 @@ function importJsonFile(file) {
             toast('File non valido: non è un tabellino esportato da qui'); return;
         }
         confirmBox('Importare questo tabellino? Quello sul dispositivo verrà sostituito (salvalo prima se ti serve).', 'Importa', () => {
+            ++opSeq;  // invalida un eventuale "Apri dal server" ancora in corso
             // Id nuovo: un file importato non deve mai sovrascrivere una partita esistente sul server
             data.id = 'm' + Date.now().toString(36);
             S = sanitizeClock(migrate(data), true); save(); renderSetup(); renderAll();
@@ -1284,6 +1299,7 @@ document.addEventListener('click', ev => {
         case 'importJson': $('#importFile').click(); break;
         case 'newMatch':
             confirmBox('Iniziare una nuova partita? Salva prima sul server se ti serve questa.', 'Nuova partita', () => {
+                ++opSeq;  // invalida un eventuale "Apri dal server" ancora in corso
                 S = newState(); save(); renderSetup(); renderAll(); toast('Nuova partita pronta');
             });
             break;

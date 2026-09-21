@@ -29,8 +29,8 @@ function demo_install(?string $id = null): string
     $id = $id ?: 'demo' . bin2hex(random_bytes(4));
     $state['id'] = $id;
     $title = $state['teams']['h']['name'] . ' v ' . $state['teams']['a']['name'] . ' (' . $state['info']['data'] . ')';
-    $st = demo_db()->prepare('INSERT INTO matches (id, title, match_date, data, updated_at)
-        VALUES (:id, :title, :d, :data, :u)
+    $st = demo_db()->prepare('INSERT INTO matches (id, title, match_date, data, created_at, updated_at)
+        VALUES (:id, :title, :d, :data, :c, :u)
         ON CONFLICT(id) DO UPDATE SET title = excluded.title, match_date = excluded.match_date,
             data = excluded.data, updated_at = excluded.updated_at');
     $st->execute([
@@ -38,6 +38,7 @@ function demo_install(?string $id = null): string
         ':title' => $title,
         ':d' => $state['info']['data'],
         ':data' => json_encode($state, JSON_UNESCAPED_UNICODE),
+        ':c' => date('Y-m-d H:i:s'),
         ':u' => date('Y-m-d H:i:s'),
     ]);
     return $id;

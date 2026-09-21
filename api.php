@@ -40,7 +40,7 @@ switch ($action) {
         reply(['ok' => true]);
 
     case 'list':
-        $rows = $db->query('SELECT id, title, match_date, owner, updated_at FROM matches ORDER BY updated_at DESC LIMIT 200')->fetchAll();
+        $rows = $db->query('SELECT id, title, match_date, owner, created_at, updated_at, forked_from FROM matches ORDER BY updated_at DESC LIMIT 200')->fetchAll();
         foreach ($rows as &$r) {
             $r['mine'] = ($r['owner'] === '' || $r['owner'] === $me);
         }
@@ -80,6 +80,7 @@ switch ($action) {
 
         // Solo chi ha creato il tabellino può sovrascriverlo: se l'id è di un
         // altro utente si salva come nuova copia, l'originale resta intatto.
+        $sourceId = $id;
         $st = $db->prepare('SELECT owner FROM matches WHERE id = ?');
         $st->execute([$id]);
         $existing = $st->fetch();
@@ -92,8 +93,10 @@ switch ($action) {
         $title = trim($state['teams']['h']['name'] . ' v ' . $state['teams']['a']['name']);
         $date = (string)($state['info']['data'] ?? '');
         $state['id'] = $id;
-        $st = $db->prepare('INSERT INTO matches (id, title, match_date, data, owner, updated_at)
-            VALUES (:id, :title, :d, :data, :owner, :u)
+        // created_at e forked_from non compaiono nella DO UPDATE: si scrivono
+        // solo quando la riga nasce, un aggiornamento successivo non li tocca.
+        $st = $db->prepare('INSERT INTO matches (id, title, match_date, data, owner, created_at, updated_at, forked_from)
+            VALUES (:id, :title, :d, :data, :owner, :c, :u, :forked_from)
             ON CONFLICT(id) DO UPDATE SET title = excluded.title, match_date = excluded.match_date,
                 data = excluded.data, updated_at = excluded.updated_at');
         $st->execute([
@@ -102,7 +105,9 @@ switch ($action) {
             ':d' => $date,
             ':data' => json_encode($state, JSON_UNESCAPED_UNICODE),
             ':owner' => $me,
+            ':c' => date('Y-m-d H:i:s'),
             ':u' => date('Y-m-d H:i:s'),
+            ':forked_from' => $forked ? $sourceId : '',
         ]);
         reply(['ok' => true, 'id' => $id, 'forked' => $forked]);
 
