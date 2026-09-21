@@ -1,8 +1,8 @@
 name: Deploy demo pubblica
 
 # Pubblica una demo su InfinityFree a ogni push su main (e a comando, dal tab
-# Actions): equivalente "da GitHub" dell'hook post-commit locale usato per
-# www.rugbyassistant.org/tabellino, ma con due differenze volute.
+# Actions): equivalente "da GitHub" dell'hook post-commit locale usato per il
+# sito vero (non versionato: vedi .gitignore), ma con due differenze volute.
 #
 # 1. Le credenziali vivono nei Secrets del repository (Settings -> Secrets
 #    and variables -> Actions: DEMO_FTP_SERVER, DEMO_FTP_USERNAME,
