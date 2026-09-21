@@ -9,25 +9,28 @@ Nasce per sostituire il foglio cartaceo: invece di mettere una crocetta sul punt
 - Funziona anche senza rete: i dati restano sul dispositivo e si inviano al server quando si vuole
 - Installazione con semplice copia dei file: utenti e password si creano dal browser
 
+**Demo pubblica, senza installare nulla: [tabellino.infinityfree.io](https://tabellino.infinityfree.io)** — utenti `demo1`...`demo5`, password `TabellinoDemo1!` (uguale per tutti, nessuno è amministratore). Si resetta a ogni pubblicazione di una nuova versione: non usarla per salvare qualcosa a lungo termine.
+
 ---
 
 ## Indice
 
 1. [Funzionalità](#funzionalità)
-2. [Requisiti](#requisiti)
-3. [Installazione](#installazione)
-4. [Configurare utenti e password](#configurare-utenti-e-password)
-5. [Sicurezza](#sicurezza)
-6. [Uso durante la partita](#uso-durante-la-partita)
-7. [Come vengono gestiti i minuti](#come-vengono-gestiti-i-minuti)
-8. [Sostituzioni e casi particolari](#sostituzioni-e-casi-particolari)
-9. [Il tabellino generato](#il-tabellino-generato)
-10. [Struttura dei file](#struttura-dei-file)
-11. [API](#api)
-12. [Modello dei dati](#modello-dei-dati)
-13. [Partita di prova](#partita-di-prova)
-14. [Limiti noti](#limiti-noti)
-15. [Cronologia versioni](#cronologia-versioni)
+2. [Demo pubblica](#demo-pubblica)
+3. [Requisiti](#requisiti)
+4. [Installazione](#installazione)
+5. [Configurare utenti e password](#configurare-utenti-e-password)
+6. [Sicurezza](#sicurezza)
+7. [Uso durante la partita](#uso-durante-la-partita)
+8. [Come vengono gestiti i minuti](#come-vengono-gestiti-i-minuti)
+9. [Sostituzioni e casi particolari](#sostituzioni-e-casi-particolari)
+10. [Il tabellino generato](#il-tabellino-generato)
+11. [Struttura dei file](#struttura-dei-file)
+12. [API](#api)
+13. [Modello dei dati](#modello-dei-dati)
+14. [Partita di prova](#partita-di-prova)
+15. [Limiti noti](#limiti-noti)
+16. [Cronologia versioni](#cronologia-versioni)
 
 ---
 
@@ -56,6 +59,19 @@ Nasce per sostituire il foglio cartaceo: invece di mettere una crocetta sul punt
 - Ufficiali di gara: arbitro, AA1, AA2, quarto uomo, TMO
 - Punti in classifica, Player of the Match con dicitura personalizzabile (es. "Simecom Player of the Match")
 - Formazioni da 23 giocatori con capitano, inseribili a mano o incollando un elenco di testo
+
+---
+
+## Demo pubblica
+
+**[tabellino.infinityfree.io](https://tabellino.infinityfree.io)** — per farsi un'idea senza installare nulla.
+
+| | |
+|---|---|
+| Utenti | `demo1`, `demo2`, `demo3`, `demo4`, `demo5` |
+| Password | `TabellinoDemo1!` (uguale per tutti) |
+
+Nessuno di questi utenti è amministratore: non si possono creare o eliminare altri utenti. La demo riparte pulita (partita di prova ricaricata, tutto il resto cancellato) a ogni pubblicazione di una nuova versione — se qualcun altro la sta usando in quel momento, perde quello che ha fatto. Non è pensata per un uso vero, solo per provare l'interfaccia.
 
 ---
 
