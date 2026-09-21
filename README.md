@@ -63,13 +63,15 @@ Nasce per sostituire il foglio cartaceo: invece di mettere una crocetta sul punt
 
 | Componente | Versione | Note |
 |---|---|---|
-| PHP | 8.2 consigliato (minimo 7.4) | Compatibile da 7.4 in su. 7.4 è però in EOL dal novembre 2022 (nessuna patch di sicurezza): se l'hosting lo permette, meglio aggiornare |
+| PHP | 8.2 consigliato (minimo 7.4) | Qualsiasi hosting PHP recente va bene |
 | Estensione PHP | `pdo_sqlite` | Presente di default nella maggior parte degli hosting; non serve un database MySQL |
 | Web server | Apache 2.4 consigliato | Gli `.htaccess` di protezione sono scritti per Apache |
 | Browser | Chrome, Safari, Firefox, Edge recenti | Serve JavaScript abilitato |
 | Connessione | HTTPS consigliato | Necessario per la copia con formattazione e per i cookie `secure` |
 
 Non servono Composer, Node, build o librerie esterne.
+
+> **Se il tuo hosting è ancora su PHP 7.4, è ora di aggiornare.** L'app funziona anche lì, ma quella versione è in **EOL dal novembre 2022**: da anni non riceve più nessuna patch di sicurezza, nemmeno per falle critiche. Il minimo supportato resta 7.4 solo per chi non ha altra scelta nell'immediato; appena il provider lo permette, passa a una versione più recente (8.2 consigliata).
 
 ---
 
