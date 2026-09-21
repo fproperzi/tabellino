@@ -46,7 +46,7 @@ function auth_users(): array
     if (!is_file(AUTH_USERS_FILE)) {
         $imported = [];
         foreach (AUTH_USERS as $name => $hash) {
-            if (is_string($hash) && str_starts_with($hash, '$2y$') && !str_contains($hash, 'SOSTITUISCI')) {
+            if (is_string($hash) && strpos($hash, '$2y$') === 0 && strpos($hash, 'SOSTITUISCI') === false) {
                 $imported[$name] = ['hash' => $hash, 'admin' => true, 'created' => date('Y-m-d H:i:s')];
             }
         }
@@ -248,7 +248,7 @@ function auth_csrf_check(?string $token): bool
 
 /* ---------- Limite tentativi per IP ---------- */
 
-function auth_with_fails(callable $fn): mixed
+function auth_with_fails(callable $fn)
 {
     auth_ensure_data_dir();
     $fh = fopen(AUTH_DATA_DIR . '/login_fails.json', 'c+');

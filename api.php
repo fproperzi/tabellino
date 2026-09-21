@@ -19,7 +19,7 @@ header('Cache-Control: no-store');
 
 const MAX_BODY_BYTES = 2_000_000;
 
-function reply(array $payload, int $status = 200): never
+function reply(array $payload, int $status = 200)
 {
     http_response_code($status);
     echo json_encode($payload, JSON_UNESCAPED_UNICODE);

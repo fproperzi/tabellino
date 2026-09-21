@@ -77,7 +77,7 @@ a { color: var(--home); }
         <input type="hidden" name="csrf" value="<?= h($csrf) ?>">
 <?php foreach ($rows as $i => $r): ?>
         <label class="row">
-            <input type="radio" name="target" value="<?= h($r['id']) ?>" <?= $i === 0 && str_contains($r['title'], 'Rovigo') ? 'checked' : '' ?>>
+            <input type="radio" name="target" value="<?= h($r['id']) ?>" <?= $i === 0 && strpos($r['title'], 'Rovigo') !== false ? 'checked' : '' ?>>
             <span>Sovrascrivi: <?= h($r['title']) ?>
                 <small>id <?= h($r['id']) ?> · aggiornata <?= h($r['updated_at']) ?> · <?= (int)$r['size'] ?> byte</small></span>
         </label>

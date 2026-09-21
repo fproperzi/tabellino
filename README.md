@@ -4,7 +4,7 @@ Web app per telefono e tablet con cui si registrano, a bordo campo, gli eventi d
 
 Nasce per sostituire il foglio cartaceo: invece di mettere una crocetta sul punteggio, si tocca il numero del giocatore e l'app ricostruisce da sola marcatori con parziali, catene di sostituzioni, cartellini e percentuali dei calciatori.
 
-- Versione attuale: **v1.10**
+- Versione attuale: **v1.11**
 - Stack: HTML + JavaScript senza dipendenze, PHP 8.2+, SQLite
 - Funziona anche senza rete: i dati restano sul dispositivo e si inviano al server quando si vuole
 - Installazione con semplice copia dei file: utenti e password si creano dal browser
@@ -63,7 +63,7 @@ Nasce per sostituire il foglio cartaceo: invece di mettere una crocetta sul punt
 
 | Componente | Versione | Note |
 |---|---|---|
-| PHP | 8.2 consigliato (minimo 8.1) | Qualsiasi hosting PHP recente va bene |
+| PHP | 8.2 consigliato (minimo 7.4) | Compatibile da 7.4 in su. 7.4 è però in EOL dal novembre 2022 (nessuna patch di sicurezza): se l'hosting lo permette, meglio aggiornare |
 | Estensione PHP | `pdo_sqlite` | Presente di default nella maggior parte degli hosting; non serve un database MySQL |
 | Web server | Apache 2.4 consigliato | Gli `.htaccess` di protezione sono scritti per Apache |
 | Browser | Chrome, Safari, Firefox, Edge recenti | Serve JavaScript abilitato |
@@ -491,6 +491,7 @@ La partita di prova può essere caricata al primo avvio, lasciando la spunta nel
 
 | Versione | Novità |
 |---|---|
+| **v1.11** | Compatibilità estesa fino a PHP 7.4 (prima richiedeva 8.1 per un tipo di ritorno `never` in `api.php` e un `mixed` in `auth.php`; `str_contains`/`str_starts_with`, PHP 8.0+, sostituiti con `strpos()`), per chi ha un hosting con una versione di PHP meno recente |
 | **v1.10** | Esportazione e importazione delle partite in JSON; tasto "Modifica" unico sugli eventi (minuto, tempo e giocatore/i in un solo passaggio, incluso il rientro delle sostituzioni temporanee); grassetti sulle etichette del tabellino oltre ai corsivi già previsti dal modello FIR; menu utente ("Utenti e password", "Esci") spostato in un tasto flottante raggiungibile da ogni scheda; schema del database gestito con migrazioni numerate in `db.php` |
 | **v1.09** | Ogni tabellino appartiene a chi l'ha creato: se un altro utente lo salva, il server crea automaticamente una copia con nuovo id invece di sovrascrivere l'originale |
 | **v1.08** | Partita di prova proposta al primo avvio con una spunta; dati della demo spostati in `demo.php`, condiviso con la pagina di ripristino |
