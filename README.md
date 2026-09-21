@@ -4,7 +4,7 @@ Web app per telefono e tablet con cui si registrano, a bordo campo, gli eventi d
 
 Nasce per sostituire il foglio cartaceo: invece di mettere una crocetta sul punteggio, si tocca il numero del giocatore e l'app ricostruisce da sola marcatori con parziali, catene di sostituzioni, cartellini e percentuali dei calciatori.
 
-- Versione attuale: **v1.08**
+- Versione attuale: **v1.09**
 - Stack: HTML + JavaScript senza dipendenze, PHP 8.2+, SQLite
 - Funziona anche senza rete: i dati restano sul dispositivo e si inviano al server quando si vuole
 - Installazione con semplice copia dei file: utenti e password si creano dal browser
@@ -177,6 +177,13 @@ Chi gestisce il proprio server può spostare il database fuori dalla document ro
 - Blocco per IP dopo troppi tentativi errati
 - `api.php` risponde `401` a qualsiasi richiesta non autenticata
 - Pagine marcate `noindex, nofollow`
+
+### Proprietà dei tabellini
+
+- Ogni tabellino salvato sul server è legato a chi l'ha creato (`owner` nella tabella `matches`)
+- Solo il proprietario può sovrascriverlo: se un altro utente carica quel tabellino e lo salva, il server non tocca l'originale ma crea automaticamente una **copia** con un nuovo id, di cui l'utente diventa proprietario
+- L'app avvisa quando succede ("salvato come copia") e nell'elenco partite mostra di chi è ogni tabellino non tuo
+- Eccezione: i tabellini salvati prima di questa funzione, e quello di prova installato da `demo.php`, non hanno un proprietario e restano modificabili da chiunque (`owner` si assegna solo quando una riga viene creata, mai in un aggiornamento)
 
 ---
 
@@ -366,12 +373,14 @@ Tutte le chiamate richiedono una sessione autenticata; senza, la risposta è `40
 
 | Metodo | Endpoint | Descrizione | Risposta |
 |---|---|---|---|
-| GET | `api.php?action=list` | Elenco partite (max 200, più recenti prima) | `{"ok":true,"items":[{"id","title","match_date","updated_at"}]}` |
-| GET | `api.php?action=load&id=…` | Stato completo di una partita | `{"ok":true,"data":{…}}` |
-| POST | `api.php?action=save` | Salva o aggiorna una partita; corpo JSON dello stato | `{"ok":true,"id":"…"}` |
+| GET | `api.php?action=list` | Elenco partite (max 200, più recenti prima) | `{"ok":true,"items":[{"id","title","match_date","owner","updated_at","mine"}]}` |
+| GET | `api.php?action=load&id=…` | Stato completo di una partita | `{"ok":true,"data":{…},"owner":"…","mine":true}` |
+| POST | `api.php?action=save` | Salva o aggiorna una partita; corpo JSON dello stato | `{"ok":true,"id":"…","forked":false}` |
 | GET | `api.php?action=ping` | Mantiene viva la sessione (l'app lo chiama ogni 10 minuti) | `{"ok":true}` |
 
 Vincoli: `id` alfanumerico fino a 40 caratteri, corpo massimo 2 MB. Le chiamate GET dall'app aggiungono un parametro sempre diverso per evitare risposte in cache da proxy o nginx.
+
+I campi `owner`/`mine`/`forked` riguardano il permesso di modifica: vedi [Proprietà dei tabellini](#proprietà-dei-tabellini) in Sicurezza.
 
 ---
 
@@ -385,6 +394,7 @@ CREATE TABLE matches (
     title       TEXT NOT NULL,     -- "Casa v Ospiti (AAAA-MM-GG)"
     match_date  TEXT,
     data        TEXT NOT NULL,     -- stato completo della partita in JSON
+    owner       TEXT NOT NULL DEFAULT '',  -- utente che l'ha creata; '' = nessuno (libera per tutti)
     updated_at  TEXT NOT NULL
 );
 ```
@@ -471,6 +481,7 @@ La partita di prova può essere caricata al primo avvio, lasciando la spunta nel
 
 | Versione | Novità |
 |---|---|
+| **v1.09** | Ogni tabellino appartiene a chi l'ha creato: se un altro utente lo salva, il server crea automaticamente una copia con nuovo id invece di sovrascrivere l'originale |
 | **v1.08** | Partita di prova proposta al primo avvio con una spunta; dati della demo spostati in `demo.php`, condiviso con la pagina di ripristino |
 | **v1.07** | Un solo formato di tabellino, il modello FIR Serie A Elite 2026: eliminato lo schema “Fac-simile FIR” e la relativa scelta; le partite salvate con l'altro schema vengono mostrate nel nuovo formato |
 | **v1.06** | Primo avvio guidato per creare l'amministratore dal browser; pagina "Utenti e password" per aggiungere utenti, reimpostare ed eliminare; utenti in `data/users.json`; creazione automatica di `data/.htaccess`; importazione dell'hash dalle versioni precedenti |

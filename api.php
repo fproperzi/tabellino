@@ -42,20 +42,31 @@ try {
         title       TEXT NOT NULL,
         match_date  TEXT,
         data        TEXT NOT NULL,
+        owner       TEXT NOT NULL DEFAULT \'\',
         updated_at  TEXT NOT NULL
     )');
+    // Migrazione da installazioni precedenti senza colonna owner
+    $cols = $db->query('PRAGMA table_info(matches)')->fetchAll(PDO::FETCH_COLUMN, 1);
+    if (!in_array('owner', $cols, true)) {
+        $db->exec("ALTER TABLE matches ADD COLUMN owner TEXT NOT NULL DEFAULT ''");
+    }
 } catch (Throwable $e) {
     reply(['ok' => false, 'error' => 'Database non disponibile'], 500);
 }
 
 $action = $_GET['action'] ?? '';
+$me = (string)(auth_current_user() ?? '');
 
 switch ($action) {
     case 'ping':
         reply(['ok' => true]);
 
     case 'list':
-        $rows = $db->query('SELECT id, title, match_date, updated_at FROM matches ORDER BY updated_at DESC LIMIT 200')->fetchAll();
+        $rows = $db->query('SELECT id, title, match_date, owner, updated_at FROM matches ORDER BY updated_at DESC LIMIT 200')->fetchAll();
+        foreach ($rows as &$r) {
+            $r['mine'] = ($r['owner'] === '' || $r['owner'] === $me);
+        }
+        unset($r);
         reply(['ok' => true, 'items' => $rows]);
 
     case 'load':
@@ -63,13 +74,14 @@ switch ($action) {
         if (!preg_match('/^[a-z0-9]{1,40}$/i', $id)) {
             reply(['ok' => false, 'error' => 'Id non valido'], 400);
         }
-        $st = $db->prepare('SELECT data FROM matches WHERE id = ?');
+        $st = $db->prepare('SELECT data, owner FROM matches WHERE id = ?');
         $st->execute([$id]);
         $row = $st->fetch();
         if (!$row) {
             reply(['ok' => false, 'error' => 'Partita non trovata'], 404);
         }
-        reply(['ok' => true, 'data' => json_decode($row['data'], true)]);
+        $mine = ($row['owner'] === '' || $row['owner'] === $me);
+        reply(['ok' => true, 'data' => json_decode($row['data'], true), 'owner' => $row['owner'], 'mine' => $mine]);
 
     case 'save':
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -87,10 +99,23 @@ switch ($action) {
         if (!preg_match('/^[a-z0-9]{1,40}$/i', $id)) {
             reply(['ok' => false, 'error' => 'Id non valido'], 400);
         }
+
+        // Solo chi ha creato il tabellino può sovrascriverlo: se l'id è di un
+        // altro utente si salva come nuova copia, l'originale resta intatto.
+        $st = $db->prepare('SELECT owner FROM matches WHERE id = ?');
+        $st->execute([$id]);
+        $existing = $st->fetch();
+        $forked = false;
+        if ($existing && $existing['owner'] !== '' && $existing['owner'] !== $me) {
+            $id = 'm' . bin2hex(random_bytes(6));
+            $forked = true;
+        }
+
         $title = trim($state['teams']['h']['name'] . ' v ' . $state['teams']['a']['name']);
         $date = (string)($state['info']['data'] ?? '');
-        $st = $db->prepare('INSERT INTO matches (id, title, match_date, data, updated_at)
-            VALUES (:id, :title, :d, :data, :u)
+        $state['id'] = $id;
+        $st = $db->prepare('INSERT INTO matches (id, title, match_date, data, owner, updated_at)
+            VALUES (:id, :title, :d, :data, :owner, :u)
             ON CONFLICT(id) DO UPDATE SET title = excluded.title, match_date = excluded.match_date,
                 data = excluded.data, updated_at = excluded.updated_at');
         $st->execute([
@@ -98,9 +123,10 @@ switch ($action) {
             ':title' => $title . ($date !== '' ? " ($date)" : ''),
             ':d' => $date,
             ':data' => json_encode($state, JSON_UNESCAPED_UNICODE),
+            ':owner' => $me,
             ':u' => date('Y-m-d H:i:s'),
         ]);
-        reply(['ok' => true, 'id' => $id]);
+        reply(['ok' => true, 'id' => $id, 'forked' => $forked]);
 
     default:
         reply(['ok' => false, 'error' => 'Azione sconosciuta'], 400);

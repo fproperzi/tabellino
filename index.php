@@ -21,7 +21,7 @@ if (!empty($_SESSION['demo_installed'])) {
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#0a1628">
 <meta name="robots" content="noindex, nofollow">
-<title>Tabellino live v1.08</title>
+<title>Tabellino live v1.09</title>
 <style>
 :root {
     --bg: #0a1628;
@@ -956,7 +956,14 @@ async function serverSave() {
         }).then(checkAuth);
         const j = await r.json();
         if (!r.ok || !j.ok) throw new Error(j.error || 'errore');
-        toast('Salvato sul server');
+        if (j.forked && j.id !== S.id) {
+            // Il tabellino caricato era di un altro utente: il server ha creato
+            // una copia con nuovo id, l'originale resta invariato
+            S.id = j.id; save();
+            toast('Non è un tuo tabellino: salvato come copia');
+        } else {
+            toast('Salvato sul server');
+        }
     } catch (e) {
         if (e.message === 'auth') return;
         toast('Salvataggio sul server non riuscito: i dati restano sul dispositivo');
@@ -970,7 +977,7 @@ async function serverList() {
         const d = $('#dlg');
         d.innerHTML = `<h3 style="margin:0 0 10px">Partite salvate</h3>
             ${j.items.length ? j.items.map(it => `<button class="btn" style="width:100%;text-align:left;margin-bottom:6px" data-load="${esc(it.id)}">
-                ${esc(it.title)}<br><small class="hint">${esc(it.updated_at)}</small></button>`).join('') : '<p class="hint">Nessuna partita sul server.</p>'}
+                ${esc(it.title)}<br><small class="hint">${esc(it.updated_at)}${it.mine ? '' : ' · di ' + esc(it.owner)}</small></button>`).join('') : '<p class="hint">Nessuna partita sul server.</p>'}
             <div class="btnrow" style="justify-content:flex-end"><button class="btn" id="dNo">Chiudi</button></div>`;
         $('#dlgOverlay').classList.add('on');
         $('#dNo').onclick = closeDlg;
@@ -989,7 +996,7 @@ async function serverLoad(id) {
         if (!j.ok) throw new Error(j.error);
         S = sanitizeClock(migrate(j.data), true); save(); renderSetup(); renderAll();
         if (S._clockFixed) { delete S._clockFixed; save(); toast('Il cronometro era rimasto acceso: fermato al 40’'); }
-        toast('Partita caricata');
+        toast(j.mine ? 'Partita caricata' : 'Partita caricata: non è tua, salvando ne farai una copia');
     } catch (e) {
         if (e.message === 'auth') return;
         toast('Caricamento non riuscito');
