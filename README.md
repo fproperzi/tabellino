@@ -4,7 +4,7 @@ Web app per telefono e tablet con cui si registrano, a bordo campo, gli eventi d
 
 Nasce per sostituire il foglio cartaceo: invece di mettere una crocetta sul punteggio, si tocca il numero del giocatore e l'app ricostruisce da sola marcatori con parziali, catene di sostituzioni, cartellini e percentuali dei calciatori.
 
-- Versione attuale: **v1.09**
+- Versione attuale: **v1.10**
 - Stack: HTML + JavaScript senza dipendenze, PHP 8.2+, SQLite
 - Funziona anche senza rete: i dati restano sul dispositivo e si inviano al server quando si vuole
 - Installazione con semplice copia dei file: utenti e password si creano dal browser
@@ -45,10 +45,10 @@ Nasce per sostituire il foglio cartaceo: invece di mettere una crocetta sul punt
 
 **Dopo la partita**
 
-- Lista cronologica degli eventi con correzione di minuto e tempo ed eliminazione
+- Lista cronologica degli eventi, ognuno correggibile con un solo tasto **Modifica**: minuto, tempo e giocatore/i (per le sostituzioni entrambi, con lo stesso selettore usato in fase di registrazione), più l'eliminazione
 - Tabellino nel formato del modello FIR Serie A Elite 2026 (vedi [Il tabellino generato](#il-tabellino-generato))
 - Copia con formattazione, copia solo testo, download `.doc`
-- Salvataggio e riapertura delle partite dal server
+- Salvataggio e riapertura delle partite dal server; esportazione e importazione in JSON per backup o per spostare una partita da un'altra installazione
 
 **Dati di contorno**
 
@@ -100,7 +100,7 @@ Copia la cartella in `C:\xampp\htdocs\tabellino\` e apri `http://localhost/tabel
 
 ## Configurare utenti e password
 
-Tutto si fa dal browser, nella scheda **Partita → Utenti e password** (pagina `utenti.php`).
+Tutto si fa dal browser: il tasto **+** in basso a destra (visibile da qualsiasi scheda) si apre in un menu con **Utenti e password** (pagina `utenti.php`) ed **Esci**.
 
 | Chi | Cosa può fare |
 |---|---|
@@ -166,7 +166,7 @@ Options -Indexes
 
 Se `Options -Indexes` provoca un errore 500, togli quella riga.
 
-Chi gestisce il proprio server può spostare il database fuori dalla document root modificando `DB_PATH` in `api.php`; controlla che `open_basedir` includa il nuovo percorso.
+Chi gestisce il proprio server può spostare il database fuori dalla document root modificando `DB_PATH` in `db.php`; controlla che `open_basedir` includa il nuovo percorso.
 
 ### Cosa fa l'autenticazione
 
@@ -221,7 +221,7 @@ Tutto viene salvato sul dispositivo a ogni tocco: un ricaricamento o l'assenza d
 
 ### A fine partita
 
-1. Controlla la scheda **Eventi** e correggi eventuali errori.
+1. Controlla la scheda **Eventi** e correggi eventuali errori con il tasto **Modifica** (minuto, tempo e giocatore in un solo passaggio).
 2. Compila note, spettatori, punti in classifica e Player of the Match.
 3. Nella scheda **Tabellino** copia il testo o scarica il `.doc`.
 4. Premi **Salva sul server** nella scheda Partita.
@@ -290,49 +290,56 @@ Abbreviazioni usate: `m.` meta, `tr.` trasformazione, `cp.` calcio piazzato, `dr
 
 ### Formato: modello Serie A Elite 2026
 
-Il tabellino segue il modello FIR della Serie A Elite 2026. Esempio con la partita di prova (in corsivo le parti indicate dal modello):
+Il tabellino segue il modello FIR della Serie A Elite 2026. Esempio con la partita di prova (in **grassetto** le etichette e le due righe di apertura, che sono **_grassetto corsivo_**):
 
-> *Rovigo – Stadio “Mario Battaglini” – sabato 23 maggio 2015*
-> *Eccellenza II giornata*
+> **_Rovigo – Stadio “Mario Battaglini” – sabato 23 maggio 2015_**
+> **_Eccellenza, II giornata_**
 > Femi-CZ Rovigo vs MPS Viadana 22-18 (9-9)
 >
-> *Marcatori: pt.* 9’ cp. Bustos G. (3-0); 18’ cp. Bustos G. (6-0); … 43’ cp. Law (9-9)
-> *st.* 45’ cp. Bustos G. (12-9); … 57’ m. Pizarro tr. Bustos G. (19-18); 66’ cp. Bustos G. (22-18)
+> **Marcatori: p.t.** 9’ cp. Bustos G. (3-0); 18’ cp. Bustos G. (6-0); … 43’ cp. Law (9-9)
+> **s.t.** 45’ cp. Bustos G. (12-9); … 57’ m. Pizarro tr. Bustos G. (19-18); 66’ cp. Bustos G. (22-18)
 >
-> Femi-CZ Rovigo: Basson; Calanchini, Pedrazzi, Pizarro, Pratichetti A.; Bustos G., Legora; Abadie, Burman, Anouer; Barion (52’ Tumiati), Reato (Cap.); Ravalle (28’ De Marchi An.), Mahoney (81’ Damiano), Boccalon (56’ Ravalle)
-> a disposizione: Damiano, De Marchi An., Tumiati
-> all.: Coppo
+> **Femi-CZ Rovigo:** Basson; Calanchini, Pedrazzi, Pizarro, Pratichetti A.; Bustos G., Legora; Abadie, Burman, Anouer; Barion (52’ Tumiati), Reato (Cap.); Ravalle (28’ De Marchi An.), Mahoney (81’ Damiano), Boccalon (56’ Ravalle)
+> **a disposizione:** Damiano, De Marchi An., Tumiati
+> **all.:** Coppo
 >
-> Arb. De Santis
-> AA1 Nome AA2 Nome
-> Quarto Uomo: Nome
-> TMO: Nome
-> Cartellini: 22’ giallo Cox (MPS Viadana); 33’ giallo Krause (MPS Viadana) e Anouer (Femi-CZ Rovigo)
-> Calciatori: Bustos G. (Femi-CZ Rovigo) 6/8; Basson (Femi-CZ Rovigo) 0/1; Law (MPS Viadana) 5/5
-> Note: giornata afosa, campo in buone condizioni, spettatori circa 4750.
-> Punti conquistati in classifica: Femi-CZ Rovigo 4; MPS Viadana 1
-> Player of the Match: Persico A. (Viadana)
+> **Arb.:** De Santis
+> **AA1:** Nome **AA2:** Nome
+> **quarto uomo:** Nome
+> **TMO:** Nome
+> **Cartellini:** 22’ giallo Cox (MPS Viadana); 33’ giallo Krause (MPS Viadana) e Anouer (Femi-CZ Rovigo)
+> **Calciatori:** Bustos G. (Femi-CZ Rovigo) 6/8; Basson (Femi-CZ Rovigo) 0/1; Law (MPS Viadana) 5/5
+> **Note:** giornata afosa, campo in buone condizioni, spettatori circa 4750.
+> **Punti conquistati in classifica:** Femi-CZ Rovigo 4; MPS Viadana 1
+> **Player of the Match:** Persico A. (Viadana)
 
 Regole applicate:
 
 | Elemento | Formato |
 |---|---|
-| Luogo e data | *corsivo*, separati da ` – ` |
-| Campionato e giornata | *corsivo*, sulla stessa riga |
-| Risultato | `Casa vs Ospiti` con il parziale del primo tempo tra parentesi |
-| Marcatori | *Marcatori: pt.* sulla prima riga, *st.* a capo; minuti progressivi |
-| Formazioni | nome squadra normale, reparti separati da `;`, capitano `(Cap.)` |
-| Etichette (a disposizione, all., Cartellini, Calciatori, Note…) | normali |
-| Arbitro | `Arb. Nome` |
-| Premio | dicitura personalizzabile, es. `Simecom Player of the Match:` |
+| Luogo e data | **_grassetto corsivo_**, separati da ` – ` |
+| Campionato e giornata | **_grassetto corsivo_**, separati da virgola, sulla stessa riga |
+| Risultato | `Casa vs Ospiti` con il parziale del primo tempo tra parentesi, normale |
+| Marcatori | **Marcatori: p.t.** sulla prima riga, **s.t.** a capo; minuti progressivi |
+| Formazioni | **nome squadra:** in grassetto, poi reparti separati da `;`, capitano `(Cap.)` |
+| Tutte le altre etichette (a disposizione:, all.:, Arb.:, AA1:/AA2:, quarto uomo:, TMO:, Cartellini:, Calciatori:, Note:, Punti conquistati in classifica:, dicitura premio) | **grassetto**, il contenuto resta normale |
 
 Nel luogo conviene scrivere città e stadio separati dal trattino, come nel modello: `Mogliano Veneto – Stadio “Maurizio Quaggia”`.
 
 ### Esportazione
 
-- **Copia con grassetti e corsivi**: mette negli appunti la versione con i corsivi del modello, da incollare in Word, Outlook o Gmail. Richiede HTTPS o `localhost`; altrimenti usa un metodo alternativo basato sulla selezione.
+- **Copia con grassetti e corsivi**: mette negli appunti la versione con i grassetti e i corsivi del modello, da incollare in Word, Outlook o Gmail. Richiede HTTPS o `localhost`; altrimenti usa un metodo alternativo basato sulla selezione.
 - **Copia solo testo**: testo semplice senza formattazione.
 - **Scarica .doc**: file HTML con estensione `.doc`. Word lo apre mantenendo la formattazione, ma può avvisare che il formato non corrisponde all'estensione: basta confermare.
+
+### Esportare e importare una partita in JSON
+
+Nella scheda **Partita → Archivio**:
+
+- **Esporta JSON**: scarica un file `.json` con lo stato completo della partita aperta (eventi, formazioni, dati di contorno) — un backup, o un file da far avere a qualcun altro.
+- **Importa JSON**: carica un file `.json` esportato così (anche da un'altra installazione) al posto della partita sul dispositivo. Riceve sempre un id nuovo, quindi non sovrascrive nulla sul server finché non si preme **Salva sul server**.
+
+Utile anche per recuperare partite da un'installazione precedente: basta estrarre il contenuto della colonna `data` della riga voluta dal vecchio `data/tabellini.sqlite` e salvarlo in un file `.json`.
 
 ---
 
@@ -342,6 +349,7 @@ Nel luogo conviene scrivere città e stadio separati dal trattino, come nel mode
 tabellino/
 ├── index.php             App (interfaccia e logica, richiede login)
 ├── api.php               Salvataggio e caricamento partite (JSON)
+├── db.php                Connessione al database e migrazioni dello schema
 ├── auth.php              Utenti, sessioni, CSRF, limite tentativi
 ├── login.php             Accesso e creazione dell'amministratore al primo avvio
 ├── utenti.php            Gestione utenti e cambio password
@@ -398,6 +406,8 @@ CREATE TABLE matches (
     updated_at  TEXT NOT NULL
 );
 ```
+
+Lo schema è gestito da `db.php`: le migrazioni sono numerate e applicate una sola volta, tracciate con `PRAGMA user_version` del file `.sqlite` stesso (non serve una tabella a parte). Per aggiungere una colonna o una tabella si accoda una voce a `MIGRATIONS`, senza mai cancellare o ricreare il database esistente.
 
 Lo stato è salvato come un unico JSON: aggiungere campi non richiede di modificare la tabella.
 
@@ -481,6 +491,7 @@ La partita di prova può essere caricata al primo avvio, lasciando la spunta nel
 
 | Versione | Novità |
 |---|---|
+| **v1.10** | Esportazione e importazione delle partite in JSON; tasto "Modifica" unico sugli eventi (minuto, tempo e giocatore/i in un solo passaggio, incluso il rientro delle sostituzioni temporanee); grassetti sulle etichette del tabellino oltre ai corsivi già previsti dal modello FIR; menu utente ("Utenti e password", "Esci") spostato in un tasto flottante raggiungibile da ogni scheda; schema del database gestito con migrazioni numerate in `db.php` |
 | **v1.09** | Ogni tabellino appartiene a chi l'ha creato: se un altro utente lo salva, il server crea automaticamente una copia con nuovo id invece di sovrascrivere l'originale |
 | **v1.08** | Partita di prova proposta al primo avvio con una spunta; dati della demo spostati in `demo.php`, condiviso con la pagina di ripristino |
 | **v1.07** | Un solo formato di tabellino, il modello FIR Serie A Elite 2026: eliminato lo schema “Fac-simile FIR” e la relativa scelta; le partite salvate con l'altro schema vengono mostrate nel nuovo formato |

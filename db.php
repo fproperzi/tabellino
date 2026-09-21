@@ -1,0 +1,75 @@
+<?php
+declare(strict_types=1);
+
+/*
+ * Tabellino live - connessione al database e migrazioni (PHP 8.1+, PDO SQLite)
+ *
+ * Schema unico condiviso da api.php e demo.php: per aggiungere una colonna o
+ * una tabella si aggiunge una nuova voce in MIGRATIONS con il numero
+ * successivo, senza mai modificare quelle già rilasciate. db_connect() le
+ * applica una sola volta, in ordine, tracciando il punto raggiunto con
+ * PRAGMA user_version (intero salvato nell'header del file .sqlite stesso).
+ */
+
+const DB_PATH = __DIR__ . '/data/tabellini.sqlite';
+
+const MIGRATIONS = [
+    1 => "CREATE TABLE IF NOT EXISTS matches (
+        id          TEXT PRIMARY KEY,
+        title       TEXT NOT NULL,
+        match_date  TEXT,
+        data        TEXT NOT NULL,
+        updated_at  TEXT NOT NULL
+    )",
+    2 => "ALTER TABLE matches ADD COLUMN owner TEXT NOT NULL DEFAULT ''",
+];
+
+function db_connect(): PDO
+{
+    $dir = dirname(DB_PATH);
+    if (!is_dir($dir) && !mkdir($dir, 0775, true) && !is_dir($dir)) {
+        throw new RuntimeException('Impossibile creare la cartella data.');
+    }
+    $db = new PDO('sqlite:' . DB_PATH, null, null, [
+        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+        PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+    ]);
+    $db->exec('PRAGMA journal_mode = WAL');
+    db_migrate($db);
+    return $db;
+}
+
+function db_migrate(PDO $db): void
+{
+    $version = (int)$db->query('PRAGMA user_version')->fetchColumn();
+    // user_version = 0 vuol dire "mai versionato": può essere un db nuovo di
+    // zecca oppure uno creato prima che esistesse questo sistema (in quel
+    // caso lo schema reale è già più avanti). Si controlla una volta sola.
+    if ($version === 0) {
+        $version = db_detect_baseline_version($db);
+        if ($version > 0) {
+            $db->exec('PRAGMA user_version = ' . $version);
+        }
+    }
+    $migrations = MIGRATIONS;
+    ksort($migrations);
+    foreach ($migrations as $v => $sql) {
+        if ($v <= $version) {
+            continue;
+        }
+        $db->exec($sql);
+        $db->exec('PRAGMA user_version = ' . $v);
+        $version = $v;
+    }
+}
+
+/** Deduce da dove ripartire guardando lo schema reale (solo per db mai versionati). */
+function db_detect_baseline_version(PDO $db): int
+{
+    $exists = $db->query("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'matches'")->fetchColumn();
+    if (!$exists) {
+        return 0;
+    }
+    $cols = $db->query('PRAGMA table_info(matches)')->fetchAll(PDO::FETCH_COLUMN, 1);
+    return in_array('owner', $cols, true) ? 2 : 1;
+}

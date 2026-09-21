@@ -21,7 +21,7 @@ if (!empty($_SESSION['demo_installed'])) {
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#0a1628">
 <meta name="robots" content="noindex, nofollow">
-<title>Tabellino live v1.09</title>
+<title>Tabellino live v1.10</title>
 <style>
 :root {
     --bg: #0a1628;
@@ -224,6 +224,33 @@ nav.tabs svg { width: 22px; height: 22px; }
 .dialog { max-width: 420px; border-radius: 16px; margin: auto; border-top: 0; }
 .overlay.center { align-items: center; padding: 16px; }
 
+/* FAB menu utente (Utenti e password / Esci) */
+.fab {
+    position: fixed; right: 16px; bottom: calc(86px + env(safe-area-inset-bottom)); z-index: 40;
+    display: flex; flex-direction: column; align-items: flex-end; gap: 12px;
+}
+.fabMenu { display: flex; flex-direction: column; align-items: flex-end; gap: 12px; }
+.fabRow {
+    display: flex; align-items: center; gap: 10px;
+    opacity: 0; transform: translateY(8px) scale(.9); pointer-events: none;
+    transition: opacity .15s, transform .15s;
+}
+.fab.open .fabRow { opacity: 1; transform: translateY(0) scale(1); pointer-events: auto; }
+.fabLabel {
+    background: var(--panel); padding: 6px 12px; border-radius: 8px; font-size: 14px;
+    white-space: nowrap; box-shadow: 0 2px 10px rgba(0, 0, 0, .35);
+}
+.fabItem, .fabMain {
+    display: flex; align-items: center; justify-content: center; border-radius: 50%;
+    background: var(--panel2); color: var(--text); text-decoration: none; flex-shrink: 0;
+}
+.fabItem { width: 46px; height: 46px; box-shadow: 0 2px 10px rgba(0, 0, 0, .35); }
+.fabItem svg { width: 20px; height: 20px; }
+.fabItem.dng { color: var(--ko); }
+.fabMain { width: 56px; height: 56px; background: var(--home); color: #fff; box-shadow: 0 4px 14px rgba(0, 0, 0, .45); }
+.fabMain svg { width: 24px; height: 24px; transition: transform .2s; }
+.fab.open .fabMain svg { transform: rotate(135deg); }
+
 @media (prefers-reduced-motion: reduce) { .act:active { transform: none; } }
 </style>
 </head>
@@ -317,15 +344,15 @@ nav.tabs svg { width: 22px; height: 22px; }
         <button class="btn pri" data-do="serverSave">Salva sul server</button>
         <button class="btn" data-do="serverList">Apri dal server</button>
         <button class="btn" data-do="exportJson">Esporta JSON</button>
+        <button class="btn" data-do="importJson">Importa JSON</button>
+        <input type="file" id="importFile" accept=".json,application/json" style="display:none">
         <button class="btn dng" data-do="newMatch">Nuova partita</button>
     </div>
-    <form method="post" action="logout.php" class="btnrow">
-        <input type="hidden" name="csrf" value="<?= htmlspecialchars($csrf, ENT_QUOTES, 'UTF-8') ?>">
-        <a class="btn" href="utenti.php" style="text-decoration:none">Utenti e password</a>
-        <button type="submit" class="btn">Esci</button>
-    </form>
     <p class="hint">Tutto viene salvato automaticamente anche sul dispositivo, quindi un ricaricamento o l’assenza di rete non fanno perdere i dati.</p>
 </main>
+<form method="post" action="logout.php" id="logoutForm" style="display:none">
+    <input type="hidden" name="csrf" value="<?= htmlspecialchars($csrf, ENT_QUOTES, 'UTF-8') ?>">
+</form>
 
 <!-- TABELLINO -->
 <main class="view" id="v-out">
@@ -345,6 +372,18 @@ nav.tabs svg { width: 22px; height: 22px; }
     <button data-view="setup"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="7" r="4"/><path d="M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2M16 3.13a4 4 0 0 1 0 7.75M21 21v-2a4 4 0 0 0-3-3.85"/></svg>Partita</button>
     <button data-view="out"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3v4a1 1 0 0 0 1 1h4"/><path d="M17 21H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2zM9 13h6M9 17h6"/></svg>Tabellino</button>
 </nav>
+
+<div class="fab" id="fab">
+    <div class="fabMenu">
+        <div class="fabRow"><span class="fabLabel">Esci</span>
+            <button class="fabItem dng" id="fabLogout" aria-label="Esci"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></button>
+        </div>
+        <div class="fabRow"><span class="fabLabel">Utenti e password</span>
+            <a class="fabItem" href="utenti.php" aria-label="Utenti e password"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></a>
+        </div>
+    </div>
+    <button class="fabMain" id="fabToggle" aria-label="Menu utente"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
+</div>
 
 <div class="overlay" id="overlay"><div class="sheet" id="sheet"></div></div>
 <div class="overlay center" id="dlgOverlay"><div class="sheet dialog" id="dlg"></div></div>
@@ -565,12 +604,15 @@ function fmtDate(iso) {
 }
 /*
  * Formato del modello FIR "Serie A Elite 2026".
- * Ogni riga è un elenco di segmenti [testo, stile] con stile '' normale, 'i' corsivo, 'b' grassetto.
- * Corsivo: luogo e data, campionato e giornata, "Marcatori:", "pt.", "st.". Il resto è normale.
+ * Ogni riga è un elenco di segmenti [testo, stile] con stile '' normale, 'i' corsivo, 'b' grassetto (combinabili, es. 'bi').
+ * Grassetto+corsivo: le due righe di apertura (luogo/data, campionato/giornata).
+ * Grassetto: tutte le etichette a sinistra dei due punti (Marcatori:, p.t., s.t., nome squadra, all.:,
+ * arb.:, AA1:/AA2:, quarto uomo:, TMO:, Cartellini:, Calciatori:, Note:, Punti conquistati in classifica:,
+ * dicitura premio). Il resto è normale.
  */
 const st = {
-    header: 'i', mLabel: 'i', team: '', label: '', vs: 'vs', pt: 'pt.', st: 'st.',
-    cap: '(Cap.)', arb: 'Arb.', campSep: ' ', coach: 'all.: '
+    header: 'bi', mLabel: 'b', team: 'b', label: 'b', vs: 'vs', pt: 'p.t.', st: 's.t.',
+    cap: '(Cap.)', arb: 'Arb.:', campSep: ', ', coach: 'all.: '
 };
 function buildLines() {
     const H = S.teams.h, A = S.teams.a, I = S.info;
@@ -638,11 +680,11 @@ function buildLines() {
     if (I.arbitro) line([st.arb + ' ', st.label], [I.arbitro, '']);
     if (I.aa1 || I.aa2) {
         const segs = [];
-        if (I.aa1) segs.push(['AA1 ', st.label], [I.aa1, '']);
-        if (I.aa2) segs.push([(I.aa1 ? ' ' : '') + 'AA2 ', st.label], [I.aa2, '']);
+        if (I.aa1) segs.push(['AA1: ', st.label], [I.aa1, '']);
+        if (I.aa2) segs.push([(I.aa1 ? ' ' : '') + 'AA2: ', st.label], [I.aa2, '']);
         line(...segs);
     }
-    if (I.quarto) line(['Quarto Uomo: ', st.label], [I.quarto, '']);
+    if (I.quarto) line(['quarto uomo: ', st.label], [I.quarto, '']);
     if (I.tmo) line(['TMO: ', st.label], [I.tmo, '']);
 
     // Cartellini, raggruppati per tempo, minuto e colore
@@ -772,6 +814,83 @@ function askKick({ team, min, half = S.clock.half, ok, link = null, t = 'conv', 
     });
 }
 
+/*
+ * Corregge un evento già registrato. Il picker copre già minuto, tempo e
+ * giocatore/i in un unico passaggio (stessa UI della registrazione); solo la
+ * meta tecnica (nessun giocatore) e il rientro di una sostituzione temporanea
+ * (un secondo minuto, non un giocatore) restano fuori e usano il dialogo.
+ */
+function editEvent(e) {
+    if (e.t === 'ptry') { editEventTime(e); return; }
+    if (e.t === 'tsub') { editEventPlayer(e, () => editTsubReturn(e)); return; }
+    editEventPlayer(e);
+}
+function editEventPlayer(e, onDone) {
+    const team = e.team;
+    if (e.t === 'sub' || e.t === 'tsub') {
+        pickPlayer({
+            title: `${LABEL[e.t]}: chi esce`, team, min: e.min, half: e.half, highlight: e.n,
+            onPick: (nOut, m, _ok, h) => {
+                pickPlayer({
+                    title: `${LABEL[e.t]}: entra al posto di ${pname(team, nOut)}`, team, min: m, half: h, highlight: e.n2,
+                    onPick: (nIn, m2, _ok2, h2) => {
+                        e.n = nOut; e.n2 = nIn; e.min = m2; e.half = h2;
+                        save(); renderAll(); toast('Giocatori aggiornati');
+                        if (onDone) onDone();
+                    }
+                });
+            }
+        });
+        return;
+    }
+    pickPlayer({
+        title: `Correggi: ${LABEL[e.t]}`, team, min: e.min, half: e.half, highlight: e.n,
+        okToggle: (e.t === 'conv' || e.t === 'pen') ? e.ok : null,
+        onPick: (n, m, okVal, h) => {
+            e.n = n; e.min = m; e.half = h;
+            if (e.t === 'conv' || e.t === 'pen') e.ok = okVal;
+            save(); renderAll(); toast('Giocatore aggiornato');
+            if (onDone) onDone();
+        }
+    });
+}
+/* Solo minuto e tempo: usato per la meta tecnica, che non ha un giocatore. */
+function editEventTime(e) {
+    const d = $('#dlg');
+    d.innerHTML = `<h3 style="margin:0 0 12px">Correggi evento</h3>
+        <div class="grid2">
+            <label class="f">Minuto<input type="number" inputmode="numeric" id="eMin" value="${e.min}"></label>
+            <label class="f">Tempo<select id="eHalf"><option value="1" ${e.half === 1 ? 'selected' : ''}>1°</option><option value="2" ${e.half === 2 ? 'selected' : ''}>2°</option></select></label>
+        </div>
+        <div class="btnrow" style="justify-content:flex-end"><button class="btn" id="dNo">Annulla</button><button class="btn pri" id="dYes">Salva</button></div>`;
+    $('#dlgOverlay').classList.add('on');
+    $('#dNo').onclick = closeDlg;
+    $('#dYes').onclick = () => {
+        e.min = Math.max(1, parseInt($('#eMin').value, 10) || e.min);
+        e.half = parseInt($('#eHalf').value, 10);
+        closeDlg(); save(); renderAll(); toast('Evento aggiornato');
+    };
+}
+/* Minuto di rientro di una sostituzione temporanea: un secondo minuto, non un giocatore. */
+function editTsubReturn(e) {
+    const d = $('#dlg');
+    d.innerHTML = `<h3 style="margin:0 0 12px">Rientro</h3>
+        <div class="grid2">
+            <label class="f">Minuto rientro<input type="number" inputmode="numeric" id="eEnd" value="${e.end ?? ''}"></label>
+            <label class="f">Tempo del rientro<select id="eEndHalf"><option value="1" ${(e.endHalf || e.half) === 1 ? 'selected' : ''}>1°</option><option value="2" ${(e.endHalf || e.half) === 2 ? 'selected' : ''}>2°</option></select></label>
+        </div>
+        <p class="hint">Lascia vuoto se non è ancora rientrato.</p>
+        <div class="btnrow" style="justify-content:flex-end"><button class="btn" id="dNo">Salta</button><button class="btn pri" id="dYes">Salva</button></div>`;
+    $('#dlgOverlay').classList.add('on');
+    $('#dNo').onclick = closeDlg;
+    $('#dYes').onclick = () => {
+        const v = $('#eEnd').value;
+        e.end = v === '' ? null : parseInt(v, 10);
+        e.endHalf = e.end == null ? null : parseInt($('#eEndHalf').value, 10);
+        closeDlg(); save(); renderAll(); toast('Evento aggiornato');
+    };
+}
+
 /* Bottom sheet di selezione giocatore */
 function pickPlayer(opt) {
     const { team, title } = opt;
@@ -897,7 +1016,7 @@ function renderEvents() {
             <div class="m num">${e.min}${Q}<span class="hbadge">${halfLabel(e.half)}</span></div>
             <div class="d">${describe(e)}<small>${esc(S.teams[e.team].name)} · ${e.half}° tempo · tabellino ${pm(e.half, e.min)}${Q}</small></div>
             <div class="tools">
-                <button data-edit="${e.id}">Minuto</button>
+                <button data-edit="${e.id}">Modifica</button>
                 <button data-del="${e.id}" class="ko">Elimina</button>
             </div>
         </div>`).join('');
@@ -1002,6 +1121,26 @@ async function serverLoad(id) {
         toast('Caricamento non riuscito');
     }
 }
+function importJsonFile(file) {
+    const reader = new FileReader();
+    reader.onload = () => {
+        let data;
+        try { data = JSON.parse(reader.result); } catch (e) {
+            toast('File non valido: non è un JSON leggibile'); return;
+        }
+        if (!data || !data.teams || !data.teams.h || !data.teams.a) {
+            toast('File non valido: non è un tabellino esportato da qui'); return;
+        }
+        confirmBox('Importare questo tabellino? Quello sul dispositivo verrà sostituito (salvalo prima se ti serve).', 'Importa', () => {
+            // Id nuovo: un file importato non deve mai sovrascrivere una partita esistente sul server
+            data.id = 'm' + Date.now().toString(36);
+            S = sanitizeClock(migrate(data), true); save(); renderSetup(); renderAll();
+            if (S._clockFixed) { delete S._clockFixed; save(); }
+            toast('Tabellino importato: salvalo sul server per condividerlo');
+        });
+    };
+    reader.readAsText(file, 'utf-8');
+}
 
 /* ---------- Copia ---------- */
 function copyPlain(txt) {
@@ -1071,28 +1210,7 @@ document.addEventListener('click', ev => {
     }
     if (b.dataset.edit) {
         const e = S.events.find(x => x.id === +b.dataset.edit);
-        if (!e) return;
-        const d = $('#dlg');
-        d.innerHTML = `<h3 style="margin:0 0 12px">Correggi evento</h3>
-            <div class="grid2">
-                <label class="f">Minuto<input type="number" inputmode="numeric" id="eMin" value="${e.min}"></label>
-                <label class="f">Tempo<select id="eHalf"><option value="1" ${e.half === 1 ? 'selected' : ''}>1°</option><option value="2" ${e.half === 2 ? 'selected' : ''}>2°</option></select></label>
-                ${e.t === 'tsub' ? `<label class="f">Minuto rientro<input type="number" inputmode="numeric" id="eEnd" value="${e.end ?? ''}"></label>
-                <label class="f">Tempo del rientro<select id="eEndHalf"><option value="1" ${(e.endHalf || e.half) === 1 ? 'selected' : ''}>1°</option><option value="2" ${(e.endHalf || e.half) === 2 ? 'selected' : ''}>2°</option></select></label>` : ''}
-            </div>
-            <div class="btnrow" style="justify-content:flex-end"><button class="btn" id="dNo">Annulla</button><button class="btn pri" id="dYes">Salva</button></div>`;
-        $('#dlgOverlay').classList.add('on');
-        $('#dNo').onclick = closeDlg;
-        $('#dYes').onclick = () => {
-            e.min = Math.max(1, parseInt($('#eMin').value, 10) || e.min);
-            e.half = parseInt($('#eHalf').value, 10);
-            if (e.t === 'tsub') {
-                const v = $('#eEnd').value;
-                e.end = v === '' ? null : parseInt(v, 10);
-                e.endHalf = e.end == null ? null : parseInt($('#eEndHalf').value, 10);
-            }
-            closeDlg(); save(); renderAll(); toast('Evento aggiornato');
-        };
+        if (e) editEvent(e);
         return;
     }
 
@@ -1163,6 +1281,7 @@ document.addEventListener('click', ev => {
             a.click();
             break;
         }
+        case 'importJson': $('#importFile').click(); break;
         case 'newMatch':
             confirmBox('Iniziare una nuova partita? Salva prima sul server se ti serve questa.', 'Nuova partita', () => {
                 S = newState(); save(); renderSetup(); renderAll(); toast('Nuova partita pronta');
@@ -1203,6 +1322,17 @@ document.addEventListener('input', ev => {
 
 $('#overlay').addEventListener('click', ev => { if (ev.target.id === 'overlay') closeSheet(); });
 $('#dlgOverlay').addEventListener('click', ev => { if (ev.target.id === 'dlgOverlay') closeDlg(); });
+$('#importFile').addEventListener('change', ev => {
+    const file = ev.target.files[0];
+    if (file) importJsonFile(file);
+    ev.target.value = '';
+});
+$('#fabToggle').addEventListener('click', () => $('#fab').classList.toggle('open'));
+$('#fabLogout').addEventListener('click', () => $('#logoutForm').submit());
+document.addEventListener('click', ev => {
+    const fab = $('#fab');
+    if (fab.classList.contains('open') && !fab.contains(ev.target)) fab.classList.remove('open');
+});
 
 setInterval(() => { renderBoard(); renderPending(); }, 1000);
 // Mantiene viva la sessione durante la partita; senza rete fallisce in silenzio

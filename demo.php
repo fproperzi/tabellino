@@ -7,26 +7,11 @@ declare(strict_types=1);
  * ripristina_demo.php.
  */
 
-const DEMO_DB_PATH = __DIR__ . '/data/tabellini.sqlite';
+require __DIR__ . '/db.php';
 
 function demo_db(): PDO
 {
-    $dir = dirname(DEMO_DB_PATH);
-    if (!is_dir($dir) && !mkdir($dir, 0775, true) && !is_dir($dir)) {
-        throw new RuntimeException('Impossibile creare la cartella data.');
-    }
-    $db = new PDO('sqlite:' . DEMO_DB_PATH, null, null, [
-        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-        PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-    ]);
-    $db->exec('CREATE TABLE IF NOT EXISTS matches (
-        id          TEXT PRIMARY KEY,
-        title       TEXT NOT NULL,
-        match_date  TEXT,
-        data        TEXT NOT NULL,
-        updated_at  TEXT NOT NULL
-    )');
-    return $db;
+    return db_connect();
 }
 
 function demo_state(): array

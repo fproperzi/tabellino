@@ -11,13 +11,12 @@ declare(strict_types=1);
  */
 
 require __DIR__ . '/auth.php';
+require __DIR__ . '/db.php';
 auth_require_api();
 
 header('Content-Type: application/json; charset=utf-8');
 header('Cache-Control: no-store');
 
-// Consigliato: cartella dati fuori dalla document root
-const DB_PATH = __DIR__ . '/data/tabellini.sqlite';
 const MAX_BODY_BYTES = 2_000_000;
 
 function reply(array $payload, int $status = 200): never
@@ -28,28 +27,7 @@ function reply(array $payload, int $status = 200): never
 }
 
 try {
-    $dir = dirname(DB_PATH);
-    if (!is_dir($dir) && !mkdir($dir, 0775, true)) {
-        reply(['ok' => false, 'error' => 'Impossibile creare la cartella dati'], 500);
-    }
-    $db = new PDO('sqlite:' . DB_PATH, null, null, [
-        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-        PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-    ]);
-    $db->exec('PRAGMA journal_mode = WAL');
-    $db->exec('CREATE TABLE IF NOT EXISTS matches (
-        id          TEXT PRIMARY KEY,
-        title       TEXT NOT NULL,
-        match_date  TEXT,
-        data        TEXT NOT NULL,
-        owner       TEXT NOT NULL DEFAULT \'\',
-        updated_at  TEXT NOT NULL
-    )');
-    // Migrazione da installazioni precedenti senza colonna owner
-    $cols = $db->query('PRAGMA table_info(matches)')->fetchAll(PDO::FETCH_COLUMN, 1);
-    if (!in_array('owner', $cols, true)) {
-        $db->exec("ALTER TABLE matches ADD COLUMN owner TEXT NOT NULL DEFAULT ''");
-    }
+    $db = db_connect();
 } catch (Throwable $e) {
     reply(['ok' => false, 'error' => 'Database non disponibile'], 500);
 }
