@@ -3,3 +3,8 @@ data/*
 
 # Credenziali di deploy FTP: mai versionate, bloccate anche via HTTP da .htaccess (\.ini$)
 deploy.ini
+
+# Hook di deploy locale: nessuna password dentro (quella è solo in deploy.ini),
+# ma il repo è pubblico e non serve renderne pubblici host/percorsi. Resta sul
+# disco e continua a funzionare (core.hooksPath .githooks), solo non versionato.
+.githooks/
