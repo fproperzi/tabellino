@@ -21,7 +21,7 @@ if (!empty($_SESSION['demo_installed'])) {
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#0a1628">
 <meta name="robots" content="noindex, nofollow">
-<title>Tabellino live v1.13</title>
+<title>Tabellino live v1.14</title>
 <style>
 :root {
     --bg: #0a1628;
@@ -46,8 +46,13 @@ body {
     padding-bottom: calc(72px + env(safe-area-inset-bottom));
 }
 button, input, select, textarea { font: inherit; color: inherit; }
-button { cursor: pointer; border: 0; background: none; }
+button { cursor: pointer; border: 0; background: none; transition: transform .08s ease, filter .08s ease; }
 button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2px solid var(--home); outline-offset: 2px; }
+/* -webkit-tap-highlight-color è disattivato sopra: senza questo, su telefono
+   toccare un bottone non dà nessun segnale, sembra che il tocco non sia
+   arrivato. .act ha già il suo :active più marcato (riga sotto), qui
+   copriamo tutti gli altri bottoni (.btn, tab, switch, dialoghi...). */
+button:active { transform: scale(.96); filter: brightness(.92); }
 .num { font-family: "Barlow Condensed", "Arial Narrow", sans-serif; font-variant-numeric: tabular-nums; }
 
 /* Scoreboard */
@@ -225,9 +230,20 @@ nav.tabs svg { width: 22px; height: 22px; }
 .overlay.center { align-items: center; padding: 16px; }
 
 /* FAB menu utente (Utenti e password / Esci) */
+/*
+ * pointer-events:none sul contenitore: è position:fixed più grande del solo
+ * cerchio "+" (include lo spazio del menu sopra, anche a menu chiuso quando
+ * le righe sono invisibili ma restano nel layout), e senza questo intercetta
+ * il tap diretto a qualunque bottone sotto di lui nella pagina — bug reale,
+ * trovato su mobile: "Importa JSON"/"Nuova partita" non rispondevano perché
+ * il tocco arrivava qui invece che al bottone, scrollando la scheda Partita
+ * fino in fondo. Riattivato subito dopo, in modo mirato, solo su .fabMain
+ * (il cerchio "+", sempre cliccabile) e su .fabRow quando il menu è aperto.
+ */
 .fab {
     position: fixed; right: 16px; bottom: calc(86px + env(safe-area-inset-bottom)); z-index: 40;
     display: flex; flex-direction: column; align-items: flex-end; gap: 12px;
+    pointer-events: none;
 }
 .fabMenu { display: flex; flex-direction: column; align-items: flex-end; gap: 12px; }
 .fabRow {
@@ -247,11 +263,11 @@ nav.tabs svg { width: 22px; height: 22px; }
 .fabItem { width: 46px; height: 46px; box-shadow: 0 2px 10px rgba(0, 0, 0, .35); }
 .fabItem svg { width: 20px; height: 20px; }
 .fabItem.dng { color: var(--ko); }
-.fabMain { width: 56px; height: 56px; background: var(--home); color: #fff; box-shadow: 0 4px 14px rgba(0, 0, 0, .45); }
+.fabMain { width: 56px; height: 56px; background: var(--home); color: #fff; box-shadow: 0 4px 14px rgba(0, 0, 0, .45); pointer-events: auto; }
 .fabMain svg { width: 24px; height: 24px; transition: transform .2s; }
 .fab.open .fabMain svg { transform: rotate(135deg); }
 
-@media (prefers-reduced-motion: reduce) { .act:active { transform: none; } }
+@media (prefers-reduced-motion: reduce) { button:active { transform: none; } }
 </style>
 </head>
 <body>

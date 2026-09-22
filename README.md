@@ -4,7 +4,7 @@ Web app per telefono e tablet con cui si registrano, a bordo campo, gli eventi d
 
 Nasce per sostituire il foglio cartaceo: invece di mettere una crocetta sul punteggio, si tocca il numero del giocatore e l'app ricostruisce da sola marcatori con parziali, catene di sostituzioni, cartellini e percentuali dei calciatori.
 
-- Versione attuale: **v1.13**
+- Versione attuale: **v1.14**
 - Stack: HTML + JavaScript senza dipendenze, PHP 8.2+, SQLite
 - Funziona anche senza rete: i dati restano sul dispositivo e si inviano al server quando si vuole
 - Installazione con semplice copia dei file: utenti e password si creano dal browser
@@ -498,6 +498,7 @@ La partita di prova può essere caricata al primo avvio, lasciando la spunta nel
 
 | Versione | Novità |
 |---|---|
+| **v1.14** | Su telefono, toccare un bottone qualsiasi non dava alcun segnale visivo (il flash nativo è disattivato apposta, ma mancava un sostituto); e la riga "Importa JSON / Esporta JSON / Nuova partita / Apri dal server" in fondo alla scheda Partita a volte non rispondeva al tocco, perché il riquadro invisibile del menu utente (tasto **+**) ci restava sopra anche da chiuso |
 | **v1.13** | Al primo avvio, prima di far creare l'amministratore, l'app controlla di poter scrivere in `data/` e di poter salvare un tabellino nel database: se l'hosting non lo permette (permessi, `pdo_sqlite` mancante) lo dice subito con un messaggio comprensibile, invece di scoprirlo dopo da un "Salvataggio non riuscito" a partita in corso |
 | **v1.12** | L'elenco partite mostra sempre il proprietario (non solo per quelle non tue), la data di creazione oltre a quella di modifica, e un'etichetta "copia" per i tabellini nati da un salvataggio su una partita non tua — prima due partite con lo stesso titolo erano indistinguibili |
 | **v1.11** | Compatibilità estesa fino a PHP 7.4 (prima richiedeva 8.1 per un tipo di ritorno `never` in `api.php` e un `mixed` in `auth.php`; `str_contains`/`str_starts_with`, PHP 8.0+, sostituiti con `strpos()`), per chi ha un hosting con una versione di PHP meno recente |
