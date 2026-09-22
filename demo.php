@@ -7,7 +7,7 @@ declare(strict_types=1);
  * ripristina_demo.php.
  */
 
-require __DIR__ . '/db.php';
+require_once __DIR__ . '/db.php';
 
 function demo_db(): PDO
 {

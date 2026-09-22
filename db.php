@@ -76,3 +76,29 @@ function db_detect_baseline_version(PDO $db): int
     $cols = $db->query('PRAGMA table_info(matches)')->fetchAll(PDO::FETCH_COLUMN, 1);
     return in_array('owner', $cols, true) ? 2 : 1;
 }
+
+/*
+ * Prova un giro di scrittura completo sulla tabella matches (lo stesso che fa
+ * api.php?action=save salvando un tabellino) e lo cancella subito dopo.
+ * Usata al primo avvio per scoprire subito un hosting senza pdo_sqlite o con
+ * data/ non scrivibile, invece di lasciare che l'utente lo scopra da un
+ * "Salvataggio sul server non riuscito" a partita già in corso. Torna null se
+ * il giro riesce, altrimenti un messaggio pensato per chi non programma.
+ */
+function db_selftest(): ?string
+{
+    if (!extension_loaded('pdo_sqlite')) {
+        return 'Manca l’estensione PHP "pdo_sqlite": chiedi al tuo hosting di abilitarla (di solito basta togliere il ; davanti a extension=pdo_sqlite in php.ini).';
+    }
+    try {
+        $db = db_connect();
+        $id = '__selftest__' . bin2hex(random_bytes(4));
+        $db->prepare('INSERT INTO matches (id, title, match_date, data, owner, created_at, updated_at, forked_from)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
+            ->execute([$id, 'selftest', '', '{}', '', date('Y-m-d H:i:s'), date('Y-m-d H:i:s'), '']);
+        $db->prepare('DELETE FROM matches WHERE id = ?')->execute([$id]);
+    } catch (Throwable $e) {
+        return 'Il database non è scrivibile (' . $e->getMessage() . '): controlla i permessi della cartella "data" oppure lo spazio disco disponibile.';
+    }
+    return null;
+}

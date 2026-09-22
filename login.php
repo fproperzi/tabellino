@@ -15,41 +15,55 @@ try {
 }
 auth_no_cache_headers();
 
+// Al primo avvio, prima di far creare l'amministratore: se l'hosting non può
+// scrivere in data/ o non ha pdo_sqlite, meglio dirlo subito che lasciarlo
+// scoprire dopo, da un "Salvataggio sul server non riuscito" a partita in corso.
+$setupError = null;
+if ($setup) {
+    require_once __DIR__ . '/db.php';
+    $setupError = auth_data_dir_selftest() ?? db_selftest();
+}
+
 $error = '';
 $ip = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && !($setup && $setupError !== null)) {
     $user = trim((string)($_POST['user'] ?? ''));
     $password = (string)($_POST['password'] ?? '');
-    if (!auth_csrf_check($_POST['csrf'] ?? null)) {
-        $error = 'Sessione del modulo scaduta: ricarica la pagina e riprova.';
-    } elseif ($setup) {
-        // Primo avvio: creazione dell'amministratore, possibile solo finché non esistono utenti
-        $error = auth_validate($user, $password, (string)($_POST['password2'] ?? ''))
-            ?? auth_create_user($user, $password, true)
-            ?? '';
-        if ($error === '') {
-            auth_login_session($user);
-            if (!empty($_POST['demo'])) {
-                // La partita di prova non deve impedire l'accesso se qualcosa va storto
-                try {
-                    require __DIR__ . '/demo.php';
-                    demo_install();
-                    $_SESSION['demo_installed'] = true;
-                } catch (Throwable $e) {
-                    $_SESSION['demo_failed'] = true;
+    try {
+        if (!auth_csrf_check($_POST['csrf'] ?? null)) {
+            $error = 'Sessione del modulo scaduta: ricarica la pagina e riprova.';
+        } elseif ($setup) {
+            // Primo avvio: creazione dell'amministratore, possibile solo finché non esistono utenti
+            $error = auth_validate($user, $password, (string)($_POST['password2'] ?? ''))
+                ?? auth_create_user($user, $password, true)
+                ?? '';
+            if ($error === '') {
+                auth_login_session($user);
+                if (!empty($_POST['demo'])) {
+                    // La partita di prova non deve impedire l'accesso se qualcosa va storto
+                    try {
+                        require __DIR__ . '/demo.php';
+                        demo_install();
+                        $_SESSION['demo_installed'] = true;
+                    } catch (Throwable $e) {
+                        $_SESSION['demo_failed'] = true;
+                    }
                 }
+                header('Location: index.php');
+                exit;
             }
+        } elseif (auth_is_locked($ip)) {
+            $error = 'Troppi tentativi errati. Riprova tra 15 minuti.';
+        } elseif (auth_try_login($user, $password)) {
             header('Location: index.php');
             exit;
+        } else {
+            $error = 'Utente o password non corretti.';
         }
-    } elseif (auth_is_locked($ip)) {
-        $error = 'Troppi tentativi errati. Riprova tra 15 minuti.';
-    } elseif (auth_try_login($user, $password)) {
-        header('Location: index.php');
-        exit;
-    } else {
-        $error = 'Utente o password non corretti.';
+    } catch (RuntimeException $e) {
+        // Es. permessi venuti meno tra il caricamento della pagina e l'invio del modulo
+        $error = $e->getMessage();
     }
 }
 
@@ -81,9 +95,19 @@ form.setup button { background: var(--ok); color: #04210f; }
 .chk input { width: 20px; height: 20px; flex: 0 0 auto; margin-top: 2px; }
 .chk small { display: block; color: var(--muted); font-size: 12px; margin-top: 3px; line-height: 1.4; }
 .err { background: rgba(255, 90, 95, .12); border-left: 4px solid var(--ko); padding: 10px 12px; border-radius: 8px; margin-bottom: 14px; font-size: 14px; }
+.retry { display: inline-block; margin-top: 4px; color: var(--home); font-size: 14px; }
 </style>
 </head>
 <body>
+<?php if ($setup && $setupError !== null): ?>
+<div style="width:100%;max-width:380px;background:var(--panel);border:1px solid var(--line);border-top:4px solid var(--ko);border-radius:16px;padding:22px">
+    <h1>Non ancora pronto</h1>
+    <p class="sub">Prima di creare l’amministratore, l’app ha controllato di poter salvare i dati su questo hosting — e non ci riesce.</p>
+    <div class="err"><?= $h($setupError) ?></div>
+    <p class="sub">Sistema il problema sul pannello del tuo hosting (permessi della cartella o estensione PHP), poi ricarica questa pagina.</p>
+    <a class="retry" href="login.php">↻ Ricarica e riprova</a>
+</div>
+<?php else: ?>
 <form method="post" action="login.php" autocomplete="on" class="<?= $setup ? 'setup' : '' ?>">
 <?php if ($setup): ?>
     <h1>Benvenuto</h1>
@@ -107,5 +131,6 @@ form.setup button { background: var(--ok); color: #04210f; }
     <button type="submit">Accedi</button>
 <?php endif; ?>
 </form>
+<?php endif; ?>
 </body>
 </html>

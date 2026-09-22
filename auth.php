@@ -38,6 +38,28 @@ function auth_ensure_data_dir(): void
     }
 }
 
+/*
+ * auth_ensure_data_dir() sa creare la cartella, ma non prova mai a scriverci
+ * dentro: su qualche hosting la mkdir riesce e la scrittura no (proprietario
+ * diverso, quota esaurita). Usata al primo avvio, prima di far creare
+ * l'amministratore, così l'errore compare subito e con un messaggio utile
+ * invece che al primo salvataggio di una partita.
+ */
+function auth_data_dir_selftest(): ?string
+{
+    try {
+        auth_ensure_data_dir();
+    } catch (RuntimeException $e) {
+        return $e->getMessage();
+    }
+    $f = AUTH_DATA_DIR . '/.selftest-' . bin2hex(random_bytes(4));
+    if (@file_put_contents($f, 'ok') === false) {
+        return 'La cartella "data" esiste ma non è scrivibile: dal pannello del provider o da FileZilla (tasto destro → Permessi file) dai alla cartella "tabellino" i permessi 755 oppure 775.';
+    }
+    @unlink($f);
+    return null;
+}
+
 /* ---------- Archivio utenti ---------- */
 
 function auth_users(): array

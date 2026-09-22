@@ -4,7 +4,7 @@ Web app per telefono e tablet con cui si registrano, a bordo campo, gli eventi d
 
 Nasce per sostituire il foglio cartaceo: invece di mettere una crocetta sul punteggio, si tocca il numero del giocatore e l'app ricostruisce da sola marcatori con parziali, catene di sostituzioni, cartellini e percentuali dei calciatori.
 
-- Versione attuale: **v1.12**
+- Versione attuale: **v1.13**
 - Stack: HTML + JavaScript senza dipendenze, PHP 8.2+, SQLite
 - Funziona anche senza rete: i dati restano sul dispositivo e si inviano al server quando si vuole
 - Installazione con semplice copia dei file: utenti e password si creano dal browser
@@ -108,7 +108,9 @@ Fatto. L'app crea da sola la cartella `data/`, il database, le sessioni e la pro
 
 ### Se compare un errore sui permessi
 
-L'app deve poter scrivere nella propria cartella. Se al primo avvio compare "Impossibile creare la cartella data", dal pannello del provider o da FileZilla (tasto destro → Permessi file) dai alla cartella `tabellino` i permessi **755** oppure **775**.
+L'app deve poter scrivere nella propria cartella. Al primo avvio, prima ancora di mostrare "Benvenuto", controlla da sola di potercela fare: se qualcosa non va (permessi, o manca l'estensione PHP `pdo_sqlite`) lo dice subito con un pannello che spiega cosa correggere, con un link per ricaricare la pagina e riprovare.
+
+Il caso più comune resta i permessi: dal pannello del provider o da FileZilla (tasto destro → Permessi file) dai alla cartella `tabellino` i permessi **755** oppure **775**, poi ricarica.
 
 ### Installazione in locale (XAMPP)
 
@@ -496,6 +498,7 @@ La partita di prova può essere caricata al primo avvio, lasciando la spunta nel
 
 | Versione | Novità |
 |---|---|
+| **v1.13** | Al primo avvio, prima di far creare l'amministratore, l'app controlla di poter scrivere in `data/` e di poter salvare un tabellino nel database: se l'hosting non lo permette (permessi, `pdo_sqlite` mancante) lo dice subito con un messaggio comprensibile, invece di scoprirlo dopo da un "Salvataggio non riuscito" a partita in corso |
 | **v1.12** | L'elenco partite mostra sempre il proprietario (non solo per quelle non tue), la data di creazione oltre a quella di modifica, e un'etichetta "copia" per i tabellini nati da un salvataggio su una partita non tua — prima due partite con lo stesso titolo erano indistinguibili |
 | **v1.11** | Compatibilità estesa fino a PHP 7.4 (prima richiedeva 8.1 per un tipo di ritorno `never` in `api.php` e un `mixed` in `auth.php`; `str_contains`/`str_starts_with`, PHP 8.0+, sostituiti con `strpos()`), per chi ha un hosting con una versione di PHP meno recente |
 | **v1.10** | Esportazione e importazione delle partite in JSON; tasto "Modifica" unico sugli eventi (minuto, tempo e giocatore/i in un solo passaggio, incluso il rientro delle sostituzioni temporanee); grassetti sulle etichette del tabellino oltre ai corsivi già previsti dal modello FIR; menu utente ("Utenti e password", "Esci") spostato in un tasto flottante raggiungibile da ogni scheda; schema del database gestito con migrazioni numerate in `db.php` |

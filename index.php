@@ -21,7 +21,7 @@ if (!empty($_SESSION['demo_installed'])) {
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#0a1628">
 <meta name="robots" content="noindex, nofollow">
-<title>Tabellino live v1.12</title>
+<title>Tabellino live v1.13</title>
 <style>
 :root {
     --bg: #0a1628;
