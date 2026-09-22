@@ -211,12 +211,26 @@ function auth_is_logged(): bool
     return true;
 }
 
+/*
+ * Senza queste intestazioni il browser può tenersi in cache una pagina
+ * vecchia (successo davvero: "Importa JSON" non c'era ancora nella copia in
+ * cache di qualcuno). Va chiamata da ogni pagina con un form/CSRF o dati che
+ * cambiano da una richiesta all'altra: non solo quelle dietro login, anche
+ * login.php stessa.
+ */
+function auth_no_cache_headers(): void
+{
+    header('Cache-Control: no-store, must-revalidate');
+    header('Pragma: no-cache');
+}
+
 function auth_require_page(): void
 {
     if (!auth_is_logged()) {
         header('Location: login.php');
         exit;
     }
+    auth_no_cache_headers();
 }
 
 function auth_require_api(): void

@@ -13,6 +13,7 @@ if (!auth_is_logged()) {
     header('Location: login.php');
     exit;
 }
+auth_no_cache_headers();
 
 function h(string $s): string
 {

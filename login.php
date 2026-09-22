@@ -13,6 +13,7 @@ try {
     http_response_code(500);
     exit(htmlspecialchars($e->getMessage(), ENT_QUOTES, 'UTF-8'));
 }
+auth_no_cache_headers();
 
 $error = '';
 $ip = $_SERVER['REMOTE_ADDR'] ?? 'unknown';

@@ -8,3 +8,7 @@ deploy.ini
 # ma il repo è pubblico e non serve renderne pubblici host/percorsi. Resta sul
 # disco e continua a funzionare (core.hooksPath .githooks), solo non versionato.
 .githooks/
+
+# Note operative per Claude tra una sessione e l'altra: parla anche di
+# infrastruttura personale (hosting, deploy), il repo è pubblico.
+CLAUDE.md
