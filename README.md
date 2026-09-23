@@ -520,3 +520,7 @@ La partita di prova può essere caricata al primo avvio, lasciando la spunta nel
 ## Riferimenti
 
 Il formato del tabellino segue il documento della Federazione Italiana Rugby inviato alle società (modello Serie A Elite 2026). In caso di dubbi sul formato vale sempre l'indicazione più recente della FIR.
+
+## Ringraziamenti
+
+**Alfio Guarise**, per le idee, le prove sul campo, il facsimile FIR da cui è nato il formato del tabellino, e il testing.
