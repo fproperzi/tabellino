@@ -523,4 +523,4 @@ Il formato del tabellino segue il documento della Federazione Italiana Rugby inv
 
 ## Ringraziamenti
 
-**Alfio Guarise**, per le idee, le prove sul campo, il facsimile FIR da cui è nato il formato del tabellino, e il testing.
+**[Alfio Guarise](https://www.alfioguarise.it/)**, per le idee, le prove sul campo, il facsimile FIR da cui è nato il formato del tabellino, e il testing.
