@@ -29,17 +29,21 @@ function demo_install(?string $id = null): string
     $id = $id ?: 'demo' . bin2hex(random_bytes(4));
     $state['id'] = $id;
     $title = $state['teams']['h']['name'] . ' v ' . $state['teams']['a']['name'] . ' (' . $state['info']['data'] . ')';
-    $st = demo_db()->prepare('INSERT INTO matches (id, title, match_date, data, created_at, updated_at)
-        VALUES (:id, :title, :d, :data, :c, :u)
-        ON CONFLICT(id) DO UPDATE SET title = excluded.title, match_date = excluded.match_date,
-            data = excluded.data, updated_at = excluded.updated_at');
-    $st->execute([
-        ':id' => $id,
-        ':title' => $title,
-        ':d' => $state['info']['data'],
-        ':data' => json_encode($state, JSON_UNESCAPED_UNICODE),
-        ':c' => date('Y-m-d H:i:s'),
-        ':u' => date('Y-m-d H:i:s'),
-    ]);
+    $now = date('Y-m-d H:i:s');
+    $data = json_encode($state, JSON_UNESCAPED_UNICODE);
+    $db = demo_db();
+    // Niente UPSERT (ON CONFLICT DO UPDATE): richiede SQLite >= 3.24, alcuni
+    // hosting hanno ancora pdo_sqlite 3.7.x. Stesso motivo del fix in
+    // api.php?action=save.
+    $exists = $db->prepare('SELECT 1 FROM matches WHERE id = ?');
+    $exists->execute([$id]);
+    if ($exists->fetchColumn()) {
+        $st = $db->prepare('UPDATE matches SET title = :title, match_date = :d, data = :data, updated_at = :u WHERE id = :id');
+        $st->execute([':id' => $id, ':title' => $title, ':d' => $state['info']['data'], ':data' => $data, ':u' => $now]);
+    } else {
+        $st = $db->prepare('INSERT INTO matches (id, title, match_date, data, created_at, updated_at)
+            VALUES (:id, :title, :d, :data, :c, :u)');
+        $st->execute([':id' => $id, ':title' => $title, ':d' => $state['info']['data'], ':data' => $data, ':c' => $now, ':u' => $now]);
+    }
     return $id;
 }

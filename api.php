@@ -93,22 +93,38 @@ switch ($action) {
         $title = trim($state['teams']['h']['name'] . ' v ' . $state['teams']['a']['name']);
         $date = (string)($state['info']['data'] ?? '');
         $state['id'] = $id;
-        // created_at e forked_from non compaiono nella DO UPDATE: si scrivono
-        // solo quando la riga nasce, un aggiornamento successivo non li tocca.
-        $st = $db->prepare('INSERT INTO matches (id, title, match_date, data, owner, created_at, updated_at, forked_from)
-            VALUES (:id, :title, :d, :data, :owner, :c, :u, :forked_from)
-            ON CONFLICT(id) DO UPDATE SET title = excluded.title, match_date = excluded.match_date,
-                data = excluded.data, updated_at = excluded.updated_at');
-        $st->execute([
-            ':id' => $id,
-            ':title' => $title . ($date !== '' ? " ($date)" : ''),
-            ':d' => $date,
-            ':data' => json_encode($state, JSON_UNESCAPED_UNICODE),
-            ':owner' => $me,
-            ':c' => date('Y-m-d H:i:s'),
-            ':u' => date('Y-m-d H:i:s'),
-            ':forked_from' => $forked ? $sourceId : '',
-        ]);
+        $now = date('Y-m-d H:i:s');
+        // Niente "INSERT ... ON CONFLICT DO UPDATE": è UPSERT, sintassi SQLite
+        // >= 3.24 (2018). Alcuni hosting hanno ancora pdo_sqlite con SQLite
+        // 3.7.x (2013) che non la conosce e lancia un syntax error a ogni
+        // salvataggio (visto in produzione, v1.15). UPDATE/INSERT separati
+        // funzionano su qualunque versione. $existing (letto sopra per la
+        // logica di fork) dice già se la riga con questo id esiste: se
+        // $forked è vero l'id è nuovo di zecca, quindi va sempre inserito.
+        $rowExists = $existing && !$forked;
+        if ($rowExists) {
+            $st = $db->prepare('UPDATE matches SET title = :title, match_date = :d, data = :data, updated_at = :u WHERE id = :id');
+            $st->execute([
+                ':id' => $id,
+                ':title' => $title . ($date !== '' ? " ($date)" : ''),
+                ':d' => $date,
+                ':data' => json_encode($state, JSON_UNESCAPED_UNICODE),
+                ':u' => $now,
+            ]);
+        } else {
+            $st = $db->prepare('INSERT INTO matches (id, title, match_date, data, owner, created_at, updated_at, forked_from)
+                VALUES (:id, :title, :d, :data, :owner, :c, :u, :forked_from)');
+            $st->execute([
+                ':id' => $id,
+                ':title' => $title . ($date !== '' ? " ($date)" : ''),
+                ':d' => $date,
+                ':data' => json_encode($state, JSON_UNESCAPED_UNICODE),
+                ':owner' => $me,
+                ':c' => $now,
+                ':u' => $now,
+                ':forked_from' => $forked ? $sourceId : '',
+            ]);
+        }
         reply(['ok' => true, 'id' => $id, 'forked' => $forked]);
 
     default:
