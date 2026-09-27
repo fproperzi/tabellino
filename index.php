@@ -21,7 +21,7 @@ if (!empty($_SESSION['demo_installed'])) {
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#0a1628">
 <meta name="robots" content="noindex, nofollow">
-<title>Tabellino live v1.15</title>
+<title>Tabellino live v1.17</title>
 <style>
 :root {
     --bg: #0a1628;
@@ -110,6 +110,8 @@ h2:first-child { margin-top: 4px; }
 .act b { font-size: 17px; font-weight: 600; }
 .act small { color: var(--muted); font-size: 12px; }
 .act.big { background: var(--panel2); border-color: #35527d; }
+/* Con il Rosso 20' i tasti sono 13: "Fine 1° tempo" prende una riga intera invece di restare solo in fondo */
+.act.wide { grid-column: 1 / -1; }
 .act .dot { display: inline-block; width: 12px; height: 16px; border-radius: 2px; vertical-align: -2px; margin-right: 6px; }
 .act:active { transform: scale(.98); }
 
@@ -299,10 +301,11 @@ nav.tabs svg { width: 22px; height: 22px; }
         <button class="act" data-act="drop" data-ok="1"><b>Drop</b><small>3 punti, non conta nei calci</small></button>
         <button class="act" data-act="ptry"><b>Meta tecnica</b><small>7 punti</small></button>
         <button class="act" data-act="yc"><b><span class="dot" style="background:var(--yellow)"></span>Giallo</b><small>10 minuti</small></button>
-        <button class="act" data-act="rc"><b><span class="dot" style="background:var(--red)"></span>Rosso</b><small>espulsione</small></button>
+        <button class="act" data-act="rc20"><b><span class="dot" style="background:var(--red)"></span>Rosso 20’</b><small>dopo 20’ entra un altro</small></button>
+        <button class="act" data-act="rc"><b><span class="dot" style="background:var(--red)"></span>Rosso</b><small>definitivo, fallo grave</small></button>
         <button class="act big" data-act="sub"><b>Sostituzione</b><small>esce → entra</small></button>
         <button class="act" data-act="tsub"><b>Sost. temporanea</b><small>sangue, HIA, giallo pilone</small></button>
-        <button class="act" data-do="setHalf2"><b>Fine 1° tempo</b><small>il 2° riparte da 1’</small></button>
+        <button class="act wide" data-do="setHalf2"><b>Fine 1° tempo</b><small>il 2° riparte da 1’</small></button>
     </div>
 </main>
 
@@ -417,7 +420,8 @@ const PTS = { try: 5, ptry: 7, conv: 2, pen: 3, drop: 3 };
 const SLOT_GROUPS = [[15], [14, 13, 12, 11], [10, 9], [8, 7, 6], [5, 4], [3, 2, 1]];
 const LABEL = {
     try: 'Meta', ptry: 'Meta tecnica', conv: 'Trasformazione', pen: 'Calcio piazzato',
-    drop: 'Drop', yc: 'Cartellino giallo', rc: 'Cartellino rosso', sub: 'Sostituzione', tsub: 'Sost. temporanea'
+    drop: 'Drop', yc: 'Cartellino giallo', rc: 'Cartellino rosso', rc20: 'Rosso 20’',
+    rcin: 'Ingresso dopo rosso 20’', sub: 'Sostituzione', tsub: 'Sost. temporanea'
 };
 const Q = '’';
 
@@ -584,7 +588,9 @@ function simulate(team) {
     const occ = {}, ann = {};
     for (let s = 1; s <= 15; s++) { occ[s] = s; ann[s] = []; }
     const items = [];
-    S.events.filter(e => e.team === team && (e.t === 'sub' || e.t === 'tsub')).forEach(e => {
+    // L'ingresso dopo un rosso da 20' (rcin) occupa il posto dell'espulso come una sostituzione:
+    // nel tabellino diventa "Espulso (60' Entrato)", e la riga Cartellini dice già il perché
+    S.events.filter(e => e.team === team && (e.t === 'sub' || e.t === 'tsub' || e.t === 'rcin')).forEach(e => {
         items.push({ k: tkey(e.half, e.min), ord: 1, e, kind: e.t });
         if (e.t === 'tsub' && e.end != null) items.push({ k: tkey(e.endHalf || e.half, e.end), ord: 0, e, kind: 'back' });
     });
@@ -625,15 +631,24 @@ function fmtDate(iso) {
 /*
  * Formato del modello FIR "Serie A Elite 2026".
  * Ogni riga è un elenco di segmenti [testo, stile] con stile '' normale, 'i' corsivo, 'b' grassetto (combinabili, es. 'bi').
- * Grassetto+corsivo: le due righe di apertura (luogo/data, campionato/giornata).
- * Grassetto: tutte le etichette a sinistra dei due punti (Marcatori:, p.t., s.t., nome squadra, all.:,
- * arb.:, AA1:/AA2:, quarto uomo:, TMO:, Cartellini:, Calciatori:, Note:, Punti conquistati in classifica:,
- * dicitura premio). Il resto è normale.
+ * Grassetto+corsivo: le due righe di apertura (luogo/data, campionato/giornata) e, come nel facsimile
+ * FIR (Rovigo v Viadana, pagina 2 del modello), le etichette Marcatori, p.t., s.t., all. e quelle degli
+ * ufficiali di gara (Arb., AA1/AA2, quarto uomo, TMO). Su queste il corsivo si ferma prima dei due
+ * punti: i ":" restano solo in grassetto (vedi lab()).
+ * Grassetto: tutte le altre etichette (nome squadra:, a disposizione:, Cartellini:, Calciatori:, Note:,
+ * Punti conquistati in classifica:, dicitura premio). Il resto è normale.
  */
 const st = {
-    header: 'bi', mLabel: 'b', team: 'b', label: 'b', vs: 'vs', pt: 'p.t.', st: 's.t.',
-    cap: '(Cap.)', arb: 'Arb.:', campSep: ', ', coach: 'all.: '
+    header: 'bi', mLabel: 'bi', team: 'b', label: 'b', coachLabel: 'bi', offLabel: 'bi',
+    vs: 'vs', pt: 'p.t.', st: 's.t.', cap: '(Cap.)', arb: 'Arb.:', campSep: ', ', coach: 'all.: '
 };
+// Etichetta → segmenti: se lo stile ha il corsivo, lo applica solo al testo prima dei due punti e
+// lascia ": " in solo grassetto. Il testo concatenato non cambia, quindi la copia semplice è identica.
+function lab(txt, sty) {
+    const k = txt.indexOf(':');
+    if (!sty.includes('i') || k < 0) return [[txt, sty]];
+    return [[txt.slice(0, k), sty], [txt.slice(k), sty.replace('i', '')]];
+}
 function buildLines() {
     const H = S.teams.h, A = S.teams.a, I = S.info;
     const tn = t => S.teams[t].name;
@@ -671,7 +686,7 @@ function buildLines() {
         if (e.team === 'h') sh += pts; else sa += pts;
         halves[e.half === 2 ? 2 : 1].push(`${txt} (${sh}-${sa})`);
     });
-    line(['Marcatori: ', st.mLabel], [st.pt + ' ', st.mLabel], [halves[1].join('; '), '']);
+    line(...lab('Marcatori: ', st.mLabel), [st.pt + ' ', st.mLabel], [halves[1].join('; '), '']);
     line([st.st + ' ', st.mLabel], [halves[2].join('; '), '']);
     blank();
 
@@ -692,25 +707,31 @@ function buildLines() {
             if (p && p.name.trim()) bench.push(p.name.trim() + (p.cap ? ' ' + st.cap : ''));
         }
         if (bench.length) line(['a disposizione: ', st.label], [bench.join(', '), '']);
-        if (team.coach) line([st.coach, st.label], [team.coach, '']);
+        if (team.coach) line(...lab(st.coach, st.coachLabel), [team.coach, '']);
         blank();
     });
 
     // Ufficiali di gara
-    if (I.arbitro) line([st.arb + ' ', st.label], [I.arbitro, '']);
+    if (I.arbitro) line(...lab(st.arb + ' ', st.offLabel), [I.arbitro, '']);
     if (I.aa1 || I.aa2) {
         const segs = [];
-        if (I.aa1) segs.push(['AA1: ', st.label], [I.aa1, '']);
-        if (I.aa2) segs.push([(I.aa1 ? ' ' : '') + 'AA2: ', st.label], [I.aa2, '']);
+        if (I.aa1) segs.push(...lab('AA1: ', st.offLabel), [I.aa1, '']);
+        if (I.aa2) {
+            // Lo spazio fra "Nome AA1" e "AA2" non va nell'etichetta: sarebbe uno spazio corsivo a sé
+            if (I.aa1) segs.push([' ', '']);
+            segs.push(...lab('AA2: ', st.offLabel), [I.aa2, '']);
+        }
         line(...segs);
     }
-    if (I.quarto) line(['quarto uomo: ', st.label], [I.quarto, '']);
-    if (I.tmo) line(['TMO: ', st.label], [I.tmo, '']);
+    if (I.quarto) line(...lab('quarto uomo: ', st.offLabel), [I.quarto, '']);
+    if (I.tmo) line(...lab('TMO: ', st.offLabel), [I.tmo, '']);
 
     // Cartellini, raggruppati per tempo, minuto e colore
     const cg = [];
-    sortedEvents().filter(e => e.t === 'yc' || e.t === 'rc').forEach(e => {
-        const col = e.t === 'yc' ? 'giallo' : 'rosso';
+    // Nessun formato FIR ufficiale per il rosso da 20' (settembre 2026): "rosso (20’)" è una proposta nostra
+    const CARD = { yc: 'giallo', rc: 'rosso', rc20: `rosso (20${Q})` };
+    sortedEvents().filter(e => CARD[e.t]).forEach(e => {
+        const col = CARD[e.t];
         const k = tkey(e.half, e.min);
         const last = cg[cg.length - 1];
         const who = `${pname(e.team, e.n)} (${tn(e.team)})`;
@@ -803,7 +824,7 @@ function startAction(type, ok) {
         askKick({ team, min, ok, t: type });
         return;
     }
-    // try, yc, rc
+    // try, yc, rc, rc20
     pickPlayer({
         title: LABEL[type], team, min,
         onPick: (n, m, _ok, h) => {
@@ -813,6 +834,24 @@ function startAction(type, ok) {
             } else {
                 toast(`${LABEL[type]} a ${pname(team, n)}`);
             }
+        }
+    });
+}
+
+/*
+ * Dopo un rosso da 20' entra un altro giocatore al posto dell'espulso: qualunque ruolo, anche uno
+ * già sostituito tatticamente (circolare FIR C.N.Ar. 7/2021-22). Non si blocca nessuno: l'app non
+ * sa se un cambio era per infortunio, e decide l'arbitro. L'espulso non rientra mai.
+ */
+function enterAfterRed(rc) {
+    const team = rc.team;
+    const field = onField(team);
+    pickPlayer({
+        title: `Entra al posto di ${pname(team, rc.n)} (rosso 20${Q})`, team, min: curMin(),
+        dim: n => field.has(n),
+        onPick: (nIn, m, _ok, h) => {
+            addEvent({ t: 'rcin', team, min: m, half: h, n: rc.n, n2: nIn, link: rc.id });
+            toast(`Entra ${pname(team, nIn)} al posto di ${pname(team, rc.n)}`);
         }
     });
 }
@@ -843,6 +882,17 @@ function askKick({ team, min, half = S.clock.half, ok, link = null, t = 'conv', 
 function editEvent(e) {
     if (e.t === 'ptry') { editEventTime(e); return; }
     if (e.t === 'tsub') { editEventPlayer(e, () => editTsubReturn(e)); return; }
+    if (e.t === 'rcin') {
+        // Si corregge solo chi è entrato: l'espulso è quello del rosso collegato
+        pickPlayer({
+            title: `Correggi: entra al posto di ${pname(e.team, e.n)}`, team: e.team, min: e.min, half: e.half, highlight: e.n2,
+            onPick: (n2, m, _ok, h) => {
+                e.n2 = n2; e.min = m; e.half = h;
+                save(); renderAll(); toast('Evento aggiornato');
+            }
+        });
+        return;
+    }
     editEventPlayer(e);
 }
 function editEventPlayer(e, onDone) {
@@ -869,6 +919,8 @@ function editEventPlayer(e, onDone) {
         onPick: (n, m, okVal, h) => {
             e.n = n; e.min = m; e.half = h;
             if (e.t === 'conv' || e.t === 'pen') e.ok = okVal;
+            // Se cambia l'espulso, anche l'ingresso collegato deve prendere il suo posto
+            if (e.t === 'rc20') S.events.forEach(x => { if (x.t === 'rcin' && x.link === e.id) x.n = n; });
             save(); renderAll(); toast('Giocatore aggiornato');
             if (onDone) onDone();
         }
@@ -1010,6 +1062,14 @@ function renderPending() {
             out.push(`<div class="pend ${e.team}"><span><span class="dot" style="display:inline-block;width:10px;height:14px;background:var(--yellow);border-radius:2px"></span>
                 ${esc(pname(e.team, e.n))} fuori dal ${e.min}${Q} ${halfLabel(e.half)}, mancano circa ${10 - played}${Q}</span></div>`);
         }
+        // Rosso da 20': resta in elenco finché non si registra chi entra. Il tasto c'è anche prima
+        // dei 20': il conteggio qui è a minuti di cronometro, quello vero lo tiene l'arbitro.
+        if (e.t === 'rc20' && !S.events.some(x => x.t === 'rcin' && x.link === e.id)) {
+            const left = played >= 0 && played < 20 ? `, può entrare un altro tra circa ${20 - played}${Q}` : ', può entrare un altro giocatore';
+            out.push(`<div class="pend ${e.team}"><span><span class="dot" style="display:inline-block;width:10px;height:14px;background:var(--red);border-radius:2px"></span>
+                ${esc(pname(e.team, e.n))} rosso 20${Q} dal ${e.min}${Q} ${halfLabel(e.half)}${left}</span>
+                <button data-rcin="${e.id}">Fai entrare</button></div>`);
+        }
     });
     $('#pending').innerHTML = out.join('');
 }
@@ -1023,6 +1083,8 @@ function describe(e) {
         case 'drop': return `Drop ${p(e.n)}`;
         case 'yc': return `Giallo a ${p(e.n)}`;
         case 'rc': return `Rosso a ${p(e.n)}`;
+        case 'rc20': return `Rosso 20${Q} a ${p(e.n)}`;
+        case 'rcin': return `Dopo il rosso 20${Q} a ${p(e.n)} entra ${p(e.n2)}`;
         case 'sub': return `Esce ${p(e.n)}, entra ${p(e.n2)}`;
         case 'tsub': return `Temporanea: ${p(e.n2)} per ${p(e.n)}` + (e.end != null ? ` (rientro ${e.end}${Q} ${halfLabel(e.endHalf || e.half)})` : ' (aperta)');
     }
@@ -1229,6 +1291,11 @@ document.addEventListener('click', ev => {
     if (b.dataset.back) {
         const e = S.events.find(x => x.id === +b.dataset.back);
         if (e) { e.end = curMin(); e.endHalf = S.clock.half; save(); renderAll(); toast(`${pname(e.team, e.n)} rientra al ${e.end}${Q} ${halfLabel(e.endHalf)}`); }
+        return;
+    }
+    if (b.dataset.rcin) {
+        const rc = S.events.find(x => x.id === +b.dataset.rcin);
+        if (rc) enterAfterRed(rc);
         return;
     }
     if (b.dataset.del) {

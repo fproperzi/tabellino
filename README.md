@@ -4,7 +4,7 @@ Web app per telefono e tablet con cui si registrano, a bordo campo, gli eventi d
 
 Nasce per sostituire il foglio cartaceo: invece di mettere una crocetta sul punteggio, si tocca il numero del giocatore e l'app ricostruisce da sola marcatori con parziali, catene di sostituzioni, cartellini e percentuali dei calciatori.
 
-- Versione attuale: **v1.15**
+- Versione attuale: **v1.17**
 - Stack: HTML + JavaScript senza dipendenze, PHP 8.2+, SQLite
 - Funziona anche senza rete: i dati restano sul dispositivo e si inviano al server quando si vuole
 - Installazione con semplice copia dei file: utenti e password si creano dal browser
@@ -40,7 +40,7 @@ Nasce per sostituire il foglio cartaceo: invece di mettere una crocetta sul punt
 
 - Tabellone sempre visibile con punteggio e cronometro (avvio, pausa, correzione del minuto)
 - Due pulsanti grandi per passare da una squadra all'altra, con tasto ⇄ per invertire i lati a seconda di dove si trova chi scrive
-- Azioni con un tocco: meta, meta tecnica, trasformazione centrata/sbagliata, calcio piazzato centrato/sbagliato, drop, cartellino giallo, cartellino rosso, sostituzione, sostituzione temporanea
+- Azioni con un tocco: meta, meta tecnica, trasformazione centrata/sbagliata, calcio piazzato centrato/sbagliato, drop, cartellino giallo, rosso da 20 minuti (con ingresso di un altro giocatore allo scadere), rosso definitivo, sostituzione, sostituzione temporanea
 - Selezione del giocatore da una griglia con numero e cognome; per le sostituzioni i giocatori non in campo (o già in campo) appaiono attenuati
 - Dopo una meta l'app propone subito la trasformazione, con l'ultimo calciatore già evidenziato
 - Promemoria per le sostituzioni temporanee aperte (con tasto "Rientra ora") e per i gialli in corso
@@ -275,6 +275,33 @@ Un rientro può avvenire anche nel tempo successivo (giallo al 35’ del primo t
 
 Le sostituzioni vanno registrate con attenzione: se si indica come "esce" un giocatore che in quel momento non è in campo, il cambio non può essere attribuito a nessun ruolo e non compare nel tabellino. La griglia aiuta mostrando attenuati i giocatori non pertinenti.
 
+### Rosso da 20 minuti
+
+**La regola.** Oltre al giallo (10 minuti) e al rosso definitivo esiste il **rosso da 20 minuti**: il giocatore espulso non rientra più, ma dopo 20 minuti di gioco la sua squadra può far entrare un altro giocatore e tornare in 15.
+
+- **World Rugby** l'ha portato in sperimentazione globale in tutte le competizioni d'élite dal 2025, in vista di una decisione definitiva nel 2026. Il rosso da 20' vale per il fallo *"not deemed deliberate or intentional"*; l'arbitro mantiene *"a full and permanent red card for any foul play considered deliberate and highly dangerous"* ([World Rugby, 21 maggio 2025](https://www.world.rugby/news/1000186/world-rugby-council-moves-20-minute-red-card-to-global-law-trial)).
+- **In Italia** la FIR l'aveva già introdotto per il TOP10 (oggi Serie A Elite) e la Coppa Italia con la [circolare C.N.Ar. 7/2021-22](https://federugby.it/wp-content/uploads/C07_-_Modifiche_alle_Regole_di_Gioco_-_Valide_per_il_TOP10_e_CI_def1.pdf) del 24 settembre 2021. Alcuni passaggi:
+  - *"Se un giocatore viene espulso con un cartellino rosso, può essere sostituito dopo 20 minuti da un altro giocatore. I 20 minuti [...] vengono misurati come "tempo di gioco"."*
+  - Anche il **secondo giallo**, *"che equivale a un cartellino rosso automatico"*, fa entrare un altro giocatore dopo 20 minuti.
+  - *"Un giocatore che è stato sostituito tatticamente, può tornare in campo per sostituire un giocatore espulso con un cartellino rosso"*, mentre *"ai giocatori sostituiti per infortunio non è consentito"*.
+  - *"Qualsiasi giocatore espulso con un cartellino rosso non può rientrare in campo di gioco per alcun motivo"*; se mancano prime linee si va alle mischie no-contest con le regole normali.
+- In Italia non c'è il giallo rivisto al bunker (TMO) che in altre competizioni può trasformarsi in rosso.
+
+Non abbiamo trovato una circolare FIR più recente che dica per esteso come si applica nella Serie A Elite in corso, né un formato ufficiale per scriverlo nel tabellino. Quello che segue è quindi **una proposta**: semplice, e facile da cambiare se la FIR ne indicherà un'altra.
+
+**Come si registra.**
+
+| Situazione | Come si registra | Risultato nel tabellino |
+|---|---|---|
+| Rosso definitivo (fallo grave, intenzionale) | Tasto **Rosso** | Cartellini: `40’ rosso Rossi (Squadra)`; nessuno entra al suo posto |
+| Rosso da 20' (fallo non intenzionale, o secondo giallo) | Tasto **Rosso 20’** | Cartellini: `40’ rosso (20’) Rossi (Squadra)` |
+| Dopo 20' entra un altro giocatore | Nel riquadro in alto della schermata Live, sulla riga del rosso, **Fai entrare** e si sceglie chi entra | Formazione: `Rossi (60’ Verdi)` |
+
+- Il riquadro mostra quanti minuti mancano, circa: l'app conta i minuti del suo cronometro, mentre per la regola il tempo dell'espulsione si ferma a gioco fermo. Per questo **Fai entrare** si può toccare anche prima: decide l'arbitro, l'app registra.
+- Può entrare chiunque, anche un giocatore già uscito. L'app non blocca nessuno perché non sa se un cambio era stato tattico o per infortunio.
+- Il giocatore che entra prende il posto dell'espulso nell'elenco della formazione, qualunque sia il ruolo in cui gioca davvero: nel tabellino le annotazioni sono per numero di maglia, non per posizione in campo.
+- Eliminando il Rosso 20' si elimina anche l'ingresso collegato; correggendo l'espulso, l'ingresso si sposta con lui.
+
 ---
 
 ## Il tabellino generato
@@ -287,7 +314,7 @@ Le sostituzioni vanno registrate con attenzione: se si indica come "esce" un gio
 - Formazioni con i reparti separati da `;`: estremo; tre quarti; mediani; terza linea; seconda linea; prima linea
 - Giocatori a disposizione e allenatore
 - Ufficiali di gara (le righe vuote non vengono stampate)
-- Cartellini con colore, raggruppati quando cadono nello stesso minuto: `33’ giallo Krause (MPS Viadana) e Anouer (Femi-CZ Rovigo)`
+- Cartellini con colore, raggruppati quando cadono nello stesso minuto: `33’ giallo Krause (MPS Viadana) e Anouer (Femi-CZ Rovigo)`; il rosso da 20 minuti è scritto `rosso (20’)` (vedi [Rosso da 20 minuti](#rosso-da-20-minuti))
 - Calciatori con centrati/totali, **drop esclusi**, trasformazioni e piazzati sommati: `Bustos G. (Femi-CZ Rovigo) 6/8`
 - Note con spettatori, punti in classifica, Player of the Match
 
@@ -295,23 +322,23 @@ Abbreviazioni usate: `m.` meta, `tr.` trasformazione, `cp.` calcio piazzato, `dr
 
 ### Formato: modello Serie A Elite 2026
 
-Il tabellino segue il modello FIR della Serie A Elite 2026. Esempio con la partita di prova (in **grassetto** le etichette e le due righe di apertura, che sono **_grassetto corsivo_**):
+Il tabellino segue il modello FIR della Serie A Elite 2026. Esempio con la partita di prova (in **grassetto** le etichette; in **_grassetto corsivo_** le due righe di apertura e le etichette di marcatori, allenatore e ufficiali di gara, con i due punti fuori dal corsivo):
 
 > **_Rovigo – Stadio “Mario Battaglini” – sabato 23 maggio 2015_**
 > **_Eccellenza, II giornata_**
 > Femi-CZ Rovigo vs MPS Viadana 22-18 (9-9)
 >
-> **Marcatori: p.t.** 9’ cp. Bustos G. (3-0); 18’ cp. Bustos G. (6-0); … 43’ cp. Law (9-9)
-> **s.t.** 45’ cp. Bustos G. (12-9); … 57’ m. Pizarro tr. Bustos G. (19-18); 66’ cp. Bustos G. (22-18)
+> **_Marcatori_: _p.t._** 9’ cp. Bustos G. (3-0); 18’ cp. Bustos G. (6-0); … 43’ cp. Law (9-9)
+> **_s.t._** 45’ cp. Bustos G. (12-9); … 57’ m. Pizarro tr. Bustos G. (19-18); 66’ cp. Bustos G. (22-18)
 >
 > **Femi-CZ Rovigo:** Basson; Calanchini, Pedrazzi, Pizarro, Pratichetti A.; Bustos G., Legora; Abadie, Burman, Anouer; Barion (52’ Tumiati), Reato (Cap.); Ravalle (28’ De Marchi An.), Mahoney (81’ Damiano), Boccalon (56’ Ravalle)
 > **a disposizione:** Damiano, De Marchi An., Tumiati
-> **all.:** Coppo
+> **_all._:** Coppo
 >
-> **Arb.:** De Santis
-> **AA1:** Nome **AA2:** Nome
-> **quarto uomo:** Nome
-> **TMO:** Nome
+> **_Arb._:** De Santis
+> **_AA1_:** Nome **_AA2_:** Nome
+> **_quarto uomo_:** Nome
+> **_TMO_:** Nome
 > **Cartellini:** 22’ giallo Cox (MPS Viadana); 33’ giallo Krause (MPS Viadana) e Anouer (Femi-CZ Rovigo)
 > **Calciatori:** Bustos G. (Femi-CZ Rovigo) 6/8; Basson (Femi-CZ Rovigo) 0/1; Law (MPS Viadana) 5/5
 > **Note:** giornata afosa, campo in buone condizioni, spettatori circa 4750.
@@ -325,9 +352,10 @@ Regole applicate:
 | Luogo e data | **_grassetto corsivo_**, separati da ` – ` |
 | Campionato e giornata | **_grassetto corsivo_**, separati da virgola, sulla stessa riga |
 | Risultato | `Casa vs Ospiti` con il parziale del primo tempo tra parentesi, normale |
-| Marcatori | **Marcatori: p.t.** sulla prima riga, **s.t.** a capo; minuti progressivi |
+| Marcatori | **_Marcatori_: _p.t._** sulla prima riga, **_s.t._** a capo, in grassetto corsivo; minuti progressivi |
 | Formazioni | **nome squadra:** in grassetto, poi reparti separati da `;`, capitano `(Cap.)` |
-| Tutte le altre etichette (a disposizione:, all.:, Arb.:, AA1:/AA2:, quarto uomo:, TMO:, Cartellini:, Calciatori:, Note:, Punti conquistati in classifica:, dicitura premio) | **grassetto**, il contenuto resta normale |
+| Allenatore e ufficiali di gara (all.:, Arb.:, AA1:/AA2:, quarto uomo:, TMO:) | **_grassetto corsivo_** fino ai due punti, i `:` solo in grassetto (come nel facsimile FIR); il contenuto resta normale |
+| Tutte le altre etichette (a disposizione:, Cartellini:, Calciatori:, Note:, Punti conquistati in classifica:, dicitura premio) | **grassetto**, il contenuto resta normale |
 
 Nel luogo conviene scrivere città e stadio separati dal trattino, come nel modello: `Mogliano Veneto – Stadio “Maurizio Quaggia”`.
 
@@ -453,7 +481,7 @@ Lo stato è salvato come un unico JSON: aggiungere campi non richiede di modific
 
 | Campo evento | Significato |
 |---|---|
-| `t` | `try` meta, `ptry` meta tecnica, `conv` trasformazione, `pen` calcio piazzato, `drop`, `yc` giallo, `rc` rosso, `sub` sostituzione, `tsub` sostituzione temporanea |
+| `t` | `try` meta, `ptry` meta tecnica, `conv` trasformazione, `pen` calcio piazzato, `drop`, `yc` giallo, `rc` rosso definitivo, `rc20` rosso da 20', `rcin` ingresso dopo un rosso da 20' (`n` l'espulso, `n2` chi entra, `link` l'id del `rc20`), `sub` sostituzione, `tsub` sostituzione temporanea |
 | `team` | `h` casa, `a` ospiti |
 | `half`, `min` | tempo (1 o 2) e minuto **relativo al tempo** |
 | `n` | maglia del giocatore (per le sostituzioni: chi esce) |
@@ -498,6 +526,8 @@ La partita di prova può essere caricata al primo avvio, lasciando la spunta nel
 
 | Versione | Novità |
 |---|---|
+| **v1.17** | Rosso da 20 minuti, separato dal rosso definitivo: nuovo tasto **Rosso 20’**, conto alla rovescia nella schermata Live e tasto **Fai entrare** per registrare chi prende il posto dell'espulso (anche un giocatore già sostituito). Nel tabellino il cartellino è scritto `rosso (20’)` e l'ingresso compare come un cambio sul ruolo dell'espulso. Formato proposto da noi: la FIR non ne ha ancora indicato uno |
+| **v1.16** | Tabellino più aderente al facsimile FIR: grassetto corsivo (non più solo grassetto) su Marcatori, p.t., s.t., all. e sulle etichette degli ufficiali di gara (Arb., AA1/AA2, quarto uomo, TMO), con il corsivo che si ferma prima dei due punti. Il testo copiato senza formattazione non cambia |
 | **v1.15** | Su hosting con una versione di SQLite molto datata (`pdo_sqlite` 3.7.x, prima del 2018), il salvataggio falliva sempre: la query usava una sintassi (`ON CONFLICT ... DO UPDATE`) introdotta solo nella SQLite 3.24 |
 | **v1.14** | Su telefono, toccare un bottone qualsiasi non dava alcun segnale visivo (il flash nativo è disattivato apposta, ma mancava un sostituto); e la riga "Importa JSON / Esporta JSON / Nuova partita / Apri dal server" in fondo alla scheda Partita a volte non rispondeva al tocco, perché il riquadro invisibile del menu utente (tasto **+**) ci restava sopra anche da chiuso |
 | **v1.13** | Al primo avvio, prima di far creare l'amministratore, l'app controlla di poter scrivere in `data/` e di poter salvare un tabellino nel database: se l'hosting non lo permette (permessi, `pdo_sqlite` mancante) lo dice subito con un messaggio comprensibile, invece di scoprirlo dopo da un "Salvataggio non riuscito" a partita in corso |
