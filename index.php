@@ -21,7 +21,7 @@ if (!empty($_SESSION['demo_installed'])) {
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#0a1628">
 <meta name="robots" content="noindex, nofollow">
-<title>Tabellino live v1.18</title>
+<title>Tabellino live v1.19</title>
 <style>
 :root {
     --bg: #0a1628;
@@ -220,6 +220,9 @@ nav.tabs svg { width: 22px; height: 22px; }
 .pb.dim { opacity: .38; }
 .pb.hl { border-color: var(--ok); }
 .sep { grid-column: 1 / -1; font-size: 12px; color: var(--muted); margin-top: 6px; }
+/* Uscita senza sostituto: largo e separato dalla griglia, per non toccarlo al posto di un numero */
+.btn.none { display: block; width: 100%; margin-top: 14px; min-height: 52px; border: 2px dashed var(--line); font-size: 16px; }
+.btn.none.hl { border: 2px solid var(--ok); }
 
 /* Toast / dialog */
 .toast {
@@ -341,7 +344,7 @@ nav.tabs svg { width: 22px; height: 22px; }
     <div class="btnrow">
         <button class="btn pri" data-do="copyOut">Copia con grassetti e corsivi</button>
         <button class="btn" data-do="copyPlain">Copia solo testo</button>
-        <button class="btn" data-do="downloadDoc">Scarica .doc</button>
+        <button class="btn" data-do="downloadDoc">Scarica .docx</button>
     </div>
     <p class="hint">Incolla in Word o nella mail: la formattazione segue il modello Serie A Elite 2026. Tutti i minuti sono progressivi, come chiede la FIR (15’ st diventa 55’).</p>
     <div class="out" id="out"></div>
@@ -558,6 +561,13 @@ function simulate(team) {
         }
         const s = findSlot(e.n);
         if (!s) return;
+        // Uscita senza sostituto (n2 = null): il ruolo resta vuoto, la squadra gioca in 14.
+        // "uscito" è una proposta nostra, come per il rosso da 20' non c'è un formato FIR.
+        if (e.t === 'sub' && e.n2 == null) {
+            ann[s].push(`${pm(e.half, e.min)}${Q} uscito`);
+            occ[s] = null;
+            return;
+        }
         const txt = (e.t === 'tsub' && e.end != null)
             ? `${pm(e.half, e.min)}${Q}-${pm(e.endHalf || e.half, e.end)}${Q} ${pname(team, e.n2)}`
             : `${pm(e.half, e.min)}${Q} ${pname(team, e.n2)}`;
@@ -727,6 +737,85 @@ function linesToHtml(L) {
 }
 function buildTabellino() { return linesToText(buildLines()); }
 
+/*
+ * .docx vero (fino alla v1.18 era HTML rinominato .doc: Word lo apriva con un avviso, Pages e
+ * l'anteprima di iPhone/Mac no). Un .docx è uno zip di XML: bastano tre file più gli stili,
+ * e lo zip si scrive a mano senza compressione (metodo "store"), senza librerie esterne.
+ */
+function linesToDocx(L) {
+    // Toglie anche i caratteri di controllo: in XML 1.0 non sono ammessi e Word rifiuterebbe il file
+    const x = s => String(s).replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, '')
+        .replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+    const W = 'xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"';
+    const body = L.map(l => '<w:p>' + l.map(([t, sty]) =>
+        '<w:r>' + (sty ? '<w:rPr>' + (sty.includes('b') ? '<w:b/>' : '') + (sty.includes('i') ? '<w:i/>' : '') + '</w:rPr>' : '')
+        + `<w:t xml:space="preserve">${x(t)}</w:t></w:r>`).join('') + '</w:p>').join('');
+    const head = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>';
+    const files = {
+        '[Content_Types].xml': head + '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'
+            + '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>'
+            + '<Default Extension="xml" ContentType="application/xml"/>'
+            + '<Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>'
+            + '<Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/>'
+            + '</Types>',
+        '_rels/.rels': head + '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+            + '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>'
+            + '</Relationships>',
+        'word/_rels/document.xml.rels': head + '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+            + '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>'
+            + '</Relationships>',
+        // Calibri 11, nessuno spazio fra i paragrafi: come il vecchio .doc (margin:0) e il facsimile FIR
+        'word/styles.xml': head + `<w:styles ${W}><w:docDefaults>`
+            + '<w:rPrDefault><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri" w:eastAsia="Calibri"/><w:sz w:val="22"/><w:szCs w:val="22"/><w:lang w:val="it-IT"/></w:rPr></w:rPrDefault>'
+            + '<w:pPrDefault><w:pPr><w:spacing w:before="0" w:after="0" w:line="240" w:lineRule="auto"/></w:pPr></w:pPrDefault>'
+            + '</w:docDefaults></w:styles>',
+        'word/document.xml': head + `<w:document ${W}><w:body>${body}`
+            + '<w:sectPr><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1134" w:right="1134" w:bottom="1134" w:left="1134" w:header="708" w:footer="708" w:gutter="0"/></w:sectPr>'
+            + '</w:body></w:document>'
+    };
+    return zipStore(files);
+}
+/* Zip senza compressione: intestazione locale + dati per ogni file, poi la directory centrale */
+function zipStore(files) {
+    const enc = new TextEncoder();
+    const crcT = zipStore.t || (zipStore.t = Array.from({ length: 256 }, (_, n) => {
+        let c = n;
+        for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1;
+        return c >>> 0;
+    }));
+    const crc32 = b => { let c = 0xFFFFFFFF; for (let i = 0; i < b.length; i++) c = crcT[(c ^ b[i]) & 255] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0; };
+    const d = new Date();
+    const dosTime = (d.getHours() << 11) | (d.getMinutes() << 5) | (d.getSeconds() >> 1);
+    const dosDate = ((d.getFullYear() - 1980) << 9) | ((d.getMonth() + 1) << 5) | d.getDate();
+    const parts = [], central = [];
+    let off = 0;
+    const hdr = (size, fill) => { const b = new Uint8Array(size); fill(new DataView(b.buffer)); return b; };
+    Object.keys(files).forEach(name => {
+        const nm = enc.encode(name), data = enc.encode(files[name]), crc = crc32(data);
+        // Campi comuni a intestazione locale (da offset 4) e centrale (da offset 6): versione, flag,
+        // metodo 0, ora, data, crc, dimensioni, lunghezza nome
+        const common = (v, o) => {
+            v.setUint16(o, 20, true); v.setUint16(o + 2, 0x0800, true);  // 0x0800: nomi in UTF-8
+            v.setUint16(o + 4, 0, true); v.setUint16(o + 6, dosTime, true); v.setUint16(o + 8, dosDate, true);
+            v.setUint32(o + 10, crc, true); v.setUint32(o + 14, data.length, true); v.setUint32(o + 18, data.length, true);
+            v.setUint16(o + 22, nm.length, true);
+        };
+        parts.push(hdr(30, v => { v.setUint32(0, 0x04034b50, true); common(v, 4); }), nm, data);
+        central.push(hdr(46, v => {
+            v.setUint32(0, 0x02014b50, true); v.setUint16(4, 20, true); common(v, 6);
+            v.setUint32(42, off, true);
+        }), nm);
+        off += 30 + nm.length + data.length;
+    });
+    const cdSize = central.reduce((s, b) => s + b.length, 0);
+    const n = Object.keys(files).length;
+    const end = hdr(22, v => {
+        v.setUint32(0, 0x06054b50, true); v.setUint16(8, n, true); v.setUint16(10, n, true);
+        v.setUint32(12, cdSize, true); v.setUint32(16, off, true);
+    });
+    return new Blob([...parts, ...central, end]);
+}
+
 /* ---------- Registrazione eventi ---------- */
 function addEvent(ev) {
     ev.id = S.seq++;
@@ -759,9 +848,12 @@ function startAction(type, ok) {
                 pickPlayer({
                     title: `${LABEL[type]}: entra al posto di ${pname(team, nOut)}`, team, min: m, half: h,
                     dim: n => field.has(n),
+                    // Solo la sostituzione definitiva: una temporanea senza chi entra non ha senso
+                    noneLabel: type === 'sub' ? 'Nessuno: esce senza sostituto' : null,
                     onPick: (nIn, m2, _ok2, h2) => {
                         addEvent({ t: type, team, min: m2, half: h2, n: nOut, n2: nIn, end: null, endHalf: null });
-                        toast(type === 'sub' ? 'Sostituzione registrata' : 'Sostituzione temporanea aperta');
+                        toast(type === 'tsub' ? 'Sostituzione temporanea aperta'
+                            : nIn == null ? 'Uscita senza sostituto registrata' : 'Sostituzione registrata');
                     }
                 });
             }
@@ -856,6 +948,7 @@ function editEventPlayer(e, onDone) {
             onPick: (nOut, m, _ok, h) => {
                 pickPlayer({
                     title: `${LABEL[e.t]}: entra al posto di ${pname(team, nOut)}`, team, min: m, half: h, highlight: e.n2,
+                    noneLabel: e.t === 'sub' ? 'Nessuno: esce senza sostituto' : null,
                     onPick: (nIn, m2, _ok2, h2) => {
                         e.n = nOut; e.n2 = nIn; e.min = m2; e.half = h2;
                         save(); renderAll(); toast('Giocatori aggiornati');
@@ -954,6 +1047,7 @@ function pickPlayer(opt) {
                 <button class="n ${!okVal ? 'on' : ''}" data-ok="0">Sbagliato</button>
             </div>`}
             <div class="pgrid">${grid}</div>
+            ${opt.noneLabel ? `<button class="btn none ${opt.highlight === null ? 'hl' : ''}" data-none>${esc(opt.noneLabel)}</button>` : ''}
             <div class="btnrow" style="margin-top:12px">
                 <button class="btn" data-close style="flex:1">${esc(opt.skipLabel || 'Annulla')}</button>
             </div>`;
@@ -970,6 +1064,7 @@ function pickPlayer(opt) {
         if (b.dataset.ok !== undefined) { okVal = b.dataset.ok === '1'; draw(); return; }
         if (b.dataset.h) { half = parseInt(b.dataset.h, 10); draw(); return; }
         if (b.hasAttribute('data-close')) { closeSheet(); return; }
+        if (b.hasAttribute('data-none')) { closeSheet(); opt.onPick(null, min, okVal, half); return; }
         if (b.dataset.n) {
             closeSheet();
             opt.onPick(parseInt(b.dataset.n, 10), min, okVal, half);
@@ -1038,7 +1133,7 @@ function describe(e) {
         case 'rc': return `Rosso a ${p(e.n)}`;
         case 'rc20': return `Rosso 20${Q} a ${p(e.n)}`;
         case 'rcin': return `Dopo il rosso 20${Q} a ${p(e.n)} entra ${p(e.n2)}`;
-        case 'sub': return `Esce ${p(e.n)}, entra ${p(e.n2)}`;
+        case 'sub': return e.n2 == null ? `Esce ${p(e.n)} senza sostituto` : `Esce ${p(e.n)}, entra ${p(e.n2)}`;
         case 'tsub': return `Temporanea: ${p(e.n2)} per ${p(e.n)}` + (e.end != null ? ` (rientro ${e.end}${Q} ${halfLabel(e.endHalf || e.half)})` : ' (aperta)');
     }
     return e.t;
@@ -1356,13 +1451,10 @@ document.addEventListener('click', ev => {
         case 'copyOut': copyRich(); break;
         case 'copyPlain': copyPlain(buildTabellino()); break;
         case 'downloadDoc': {
-            const html = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">
-<head><meta charset="utf-8"><title>Tabellino</title></head>
-<body style="font-family:Calibri,sans-serif;font-size:11pt">${linesToHtml(buildLines())}</body></html>`;
-            const blob = new Blob([html], { type: 'application/msword' });
+            const blob = new Blob([linesToDocx(buildLines())], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
             const a = document.createElement('a');
             a.href = URL.createObjectURL(blob);
-            a.download = `tabellino_${S.id}.doc`;
+            a.download = `tabellino_${S.id}.docx`;
             a.click();
             break;
         }

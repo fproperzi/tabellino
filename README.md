@@ -40,7 +40,7 @@ Nasce per sostituire il foglio cartaceo: invece di mettere una crocetta sul punt
 
 - Tabellone sempre visibile con punteggio e cronometro (avvio, pausa, correzione del minuto)
 - Due pulsanti grandi per passare da una squadra all'altra, con tasto ⇄ per invertire i lati a seconda di dove si trova chi scrive
-- Azioni con un tocco: meta, meta tecnica, trasformazione centrata/sbagliata, calcio piazzato centrato/sbagliato, drop, cartellino giallo, rosso da 20 minuti (con ingresso di un altro giocatore allo scadere), rosso definitivo, sostituzione, sostituzione temporanea
+- Azioni con un tocco: meta, meta tecnica, trasformazione centrata/sbagliata, calcio piazzato centrato/sbagliato, drop, cartellino giallo, rosso da 20 minuti (con ingresso di un altro giocatore allo scadere), rosso definitivo, sostituzione (anche uscita senza sostituto), sostituzione temporanea
 - Selezione del giocatore da una griglia con numero e cognome; per le sostituzioni i giocatori non in campo (o già in campo) appaiono attenuati
 - Dopo una meta l'app propone subito la trasformazione, con l'ultimo calciatore già evidenziato
 - Promemoria per le sostituzioni temporanee aperte (con tasto "Rientra ora") e per i gialli in corso
@@ -50,7 +50,7 @@ Nasce per sostituire il foglio cartaceo: invece di mettere una crocetta sul punt
 
 - Lista cronologica degli eventi, ognuno correggibile con un solo tasto **Modifica**: minuto, tempo e giocatore/i (per le sostituzioni entrambi, con lo stesso selettore usato in fase di registrazione), più l'eliminazione
 - Tabellino nel formato del modello FIR Serie A Elite 2026 (vedi [Il tabellino generato](#il-tabellino-generato))
-- Copia con formattazione, copia solo testo, download `.doc`
+- Copia con formattazione, copia solo testo, download `.docx`
 - Salvataggio e riapertura delle partite dal server; esportazione e importazione in JSON per backup o per spostare una partita da un'altra installazione
 
 **Dati di contorno**
@@ -228,7 +228,7 @@ Tutto viene salvato sul dispositivo a ogni tocco: un ricaricamento o l'assenza d
 
 1. Controlla la scheda **Eventi** e correggi eventuali errori con il tasto **Modifica** (minuto, tempo e giocatore in un solo passaggio).
 2. Compila note, spettatori, punti in classifica e Player of the Match.
-3. Nella scheda **Tabellino** copia il testo o scarica il `.doc`.
+3. Nella scheda **Tabellino** copia il testo o scarica il `.docx`.
 4. Premi **Salva sul server** nella scheda Partita.
 
 ---
@@ -270,6 +270,7 @@ L'app tiene traccia di **chi occupa ogni ruolo da 1 a 15** in ogni momento, e da
 | Giallo a un pilone con mischia da giocare | Giallo al pilone + sost. temporanea di un altro avanti, rientro a fine sanzione | `Odiete (35’-45’ Ferrari)` |
 | Temporanea che diventa definitiva | Non premere "Rientra ora" | `Odiete (35’ Ferrari)` |
 | Il sostituto temporaneo viene a sua volta sostituito | Sostituzione con esce = il sostituto | annotazioni in sequenza sullo stesso ruolo |
+| Esce senza essere sostituito (infortunio, nessun cambio disponibile) | Sostituzione: esce 10, poi **Nessuno: esce senza sostituto** | `Bustos G. (66’ uscito)` |
 
 Un rientro può avvenire anche nel tempo successivo (giallo al 35’ del primo tempo, rientro al 5’ del secondo): nel tabellino compare come `35’-45’`.
 
@@ -363,7 +364,7 @@ Nel luogo conviene scrivere città e stadio separati dal trattino, come nel mode
 
 - **Copia con grassetti e corsivi**: mette negli appunti la versione con i grassetti e i corsivi del modello, da incollare in Word, Outlook o Gmail. Richiede HTTPS o `localhost`; altrimenti usa un metodo alternativo basato sulla selezione.
 - **Copia solo testo**: testo semplice senza formattazione.
-- **Scarica .doc**: file HTML con estensione `.doc`. Word lo apre mantenendo la formattazione, ma può avvisare che il formato non corrisponde all'estensione: basta confermare.
+- **Scarica .docx**: vero documento Word (Calibri 11, grassetti e corsivi del modello), generato direttamente nel browser. Si apre con Word, Pages, LibreOffice, Google Documenti e l'anteprima di iPhone e Mac.
 
 ### Esportare e importare una partita in JSON
 
@@ -485,7 +486,7 @@ Lo stato è salvato come un unico JSON: aggiungere campi non richiede di modific
 | `team` | `h` casa, `a` ospiti |
 | `half`, `min` | tempo (1 o 2) e minuto **relativo al tempo** |
 | `n` | maglia del giocatore (per le sostituzioni: chi esce) |
-| `n2` | chi entra (solo sostituzioni) |
+| `n2` | chi entra (solo sostituzioni; `null` se il giocatore esce senza sostituto) |
 | `ok` | calcio centrato o sbagliato |
 | `link` | per una trasformazione, l'`id` della meta a cui si riferisce |
 | `end`, `endHalf` | minuto e tempo di rientro di una sostituzione temporanea |
@@ -517,7 +518,6 @@ La partita di prova può essere caricata al primo avvio, lasciando la spunta nel
 - **Durata della sessione**: se il PHP del server non consente di cambiare `session.save_path` o `gc_maxlifetime` da codice, la sessione può durare meno delle 12 ore previste. I dati della partita restano comunque sul dispositivo.
 - **Modifiche in parallelo**: se due dispositivi salvano la stessa partita, vince l'ultimo salvataggio. Non c'è unione automatica.
 - **Sincronizzazione**: il salvataggio sul server è manuale, non avviene a ogni evento.
-- **File `.doc`**: è HTML, non un vero `.docx`; Word può mostrare un avviso all'apertura.
 - **Copia formattata**: il risultato dipende dal programma in cui si incolla.
 
 ---
@@ -526,6 +526,7 @@ La partita di prova può essere caricata al primo avvio, lasciando la spunta nel
 
 | Versione | Novità |
 |---|---|
+| **v1.19** | Uscita senza sostituto: dopo aver scelto chi esce nella **Sostituzione**, il tasto **Nessuno: esce senza sostituto** lascia il ruolo vuoto; nel tabellino compare `(66’ uscito)` (formato proposto da noi, la FIR non ne indica uno). Il tabellino si scarica come vero `.docx` invece che come HTML rinominato `.doc`, che su iPhone e Mac non si apriva |
 | **v1.18** | Il menu utente non è più un tasto **+** flottante sopra al contenuto: diventa il quinto tasto **Utente** della barra in basso, che apre un riquadro con l'utente collegato, **Utenti e password** ed **Esci**. Niente più tasti coperti dal cerchio flottante |
 | **v1.17** | Rosso da 20 minuti, separato dal rosso definitivo: nuovo tasto **Rosso 20’**, conto alla rovescia nella schermata Live e tasto **Fai entrare** per registrare chi prende il posto dell'espulso (anche un giocatore già sostituito). Nel tabellino il cartellino è scritto `rosso (20’)` e l'ingresso compare come un cambio sul ruolo dell'espulso. Formato proposto da noi: la FIR non ne ha ancora indicato uno |
 | **v1.16** | Tabellino più aderente al facsimile FIR: grassetto corsivo (non più solo grassetto) su Marcatori, p.t., s.t., all. e sulle etichette degli ufficiali di gara (Arb., AA1/AA2, quarto uomo, TMO), con il corsivo che si ferma prima dei due punti. Il testo copiato senza formattazione non cambia |
