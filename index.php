@@ -750,7 +750,9 @@ function linesToDocx(L) {
     const body = L.map(l => '<w:p>' + l.map(([t, sty]) =>
         '<w:r>' + (sty ? '<w:rPr>' + (sty.includes('b') ? '<w:b/>' : '') + (sty.includes('i') ? '<w:i/>' : '') + '</w:rPr>' : '')
         + `<w:t xml:space="preserve">${x(t)}</w:t></w:r>`).join('') + '</w:p>').join('');
-    const head = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>';
+    // '<' + '?xml' spezzato apposta: scritto intero, con short_open_tag attivo (molti hosting, non
+    // XAMPP) PHP lo legge come apertura di codice e tutta la pagina va in errore 500. Non "semplificarlo".
+    const head = '<' + '?xml version="1.0" encoding="UTF-8" standalone="yes"?>';
     const files = {
         '[Content_Types].xml': head + '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'
             + '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>'
