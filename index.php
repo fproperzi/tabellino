@@ -21,7 +21,7 @@ if (!empty($_SESSION['demo_installed'])) {
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#0a1628">
 <meta name="robots" content="noindex, nofollow">
-<title>Tabellino live v1.17</title>
+<title>Tabellino live v1.18</title>
 <style>
 :root {
     --bg: #0a1628;
@@ -182,7 +182,7 @@ textarea { min-height: 90px; resize: vertical; }
 /* Bottom nav */
 nav.tabs {
     position: fixed; bottom: 0; left: 0; right: 0; z-index: 30;
-    display: grid; grid-template-columns: repeat(4, 1fr);
+    display: grid; grid-template-columns: repeat(5, 1fr);
     background: #06101f; border-top: 1px solid var(--line);
     padding-bottom: env(safe-area-inset-bottom);
 }
@@ -230,44 +230,6 @@ nav.tabs svg { width: 22px; height: 22px; }
 .toast.on { display: block; }
 .dialog { max-width: 420px; border-radius: 16px; margin: auto; border-top: 0; }
 .overlay.center { align-items: center; padding: 16px; }
-
-/* FAB menu utente (Utenti e password / Esci) */
-/*
- * pointer-events:none sul contenitore: è position:fixed più grande del solo
- * cerchio "+" (include lo spazio del menu sopra, anche a menu chiuso quando
- * le righe sono invisibili ma restano nel layout), e senza questo intercetta
- * il tap diretto a qualunque bottone sotto di lui nella pagina — bug reale,
- * trovato su mobile: "Importa JSON"/"Nuova partita" non rispondevano perché
- * il tocco arrivava qui invece che al bottone, scrollando la scheda Partita
- * fino in fondo. Riattivato subito dopo, in modo mirato, solo su .fabMain
- * (il cerchio "+", sempre cliccabile) e su .fabRow quando il menu è aperto.
- */
-.fab {
-    position: fixed; right: 16px; bottom: calc(86px + env(safe-area-inset-bottom)); z-index: 40;
-    display: flex; flex-direction: column; align-items: flex-end; gap: 12px;
-    pointer-events: none;
-}
-.fabMenu { display: flex; flex-direction: column; align-items: flex-end; gap: 12px; }
-.fabRow {
-    display: flex; align-items: center; gap: 10px;
-    opacity: 0; transform: translateY(8px) scale(.9); pointer-events: none;
-    transition: opacity .15s, transform .15s;
-}
-.fab.open .fabRow { opacity: 1; transform: translateY(0) scale(1); pointer-events: auto; }
-.fabLabel {
-    background: var(--panel); padding: 6px 12px; border-radius: 8px; font-size: 14px;
-    white-space: nowrap; box-shadow: 0 2px 10px rgba(0, 0, 0, .35);
-}
-.fabItem, .fabMain {
-    display: flex; align-items: center; justify-content: center; border-radius: 50%;
-    background: var(--panel2); color: var(--text); text-decoration: none; flex-shrink: 0;
-}
-.fabItem { width: 46px; height: 46px; box-shadow: 0 2px 10px rgba(0, 0, 0, .35); }
-.fabItem svg { width: 20px; height: 20px; }
-.fabItem.dng { color: var(--ko); }
-.fabMain { width: 56px; height: 56px; background: var(--home); color: #fff; box-shadow: 0 4px 14px rgba(0, 0, 0, .45); pointer-events: auto; }
-.fabMain svg { width: 24px; height: 24px; transition: transform .2s; }
-.fab.open .fabMain svg { transform: rotate(135deg); }
 
 @media (prefers-reduced-motion: reduce) { button:active { transform: none; } }
 </style>
@@ -390,19 +352,9 @@ nav.tabs svg { width: 22px; height: 22px; }
     <button data-view="events"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6h11M9 12h11M9 18h11M5 6v.01M5 12v.01M5 18v.01"/></svg>Eventi</button>
     <button data-view="setup"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="7" r="4"/><path d="M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2M16 3.13a4 4 0 0 1 0 7.75M21 21v-2a4 4 0 0 0-3-3.85"/></svg>Partita</button>
     <button data-view="out"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3v4a1 1 0 0 0 1 1h4"/><path d="M17 21H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2zM9 13h6M9 17h6"/></svg>Tabellino</button>
+    <!-- Ha preso il posto del FAB "+": non è una vista, apre un dialogo (data-do, non data-view) -->
+    <button data-do="userMenu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="10" r="3"/><path d="M6.2 18.4a7 7 0 0 1 11.6 0"/></svg>Utente</button>
 </nav>
-
-<div class="fab" id="fab">
-    <div class="fabMenu">
-        <div class="fabRow"><span class="fabLabel">Esci</span>
-            <button class="fabItem dng" id="fabLogout" aria-label="Esci"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></button>
-        </div>
-        <div class="fabRow"><span class="fabLabel">Utenti e password</span>
-            <a class="fabItem" href="utenti.php" aria-label="Utenti e password"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></a>
-        </div>
-    </div>
-    <button class="fabMain" id="fabToggle" aria-label="Menu utente"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
-</div>
 
 <div class="overlay" id="overlay"><div class="sheet" id="sheet"></div></div>
 <div class="overlay center" id="dlgOverlay"><div class="sheet dialog" id="dlg"></div></div>
@@ -415,6 +367,7 @@ nav.tabs svg { width: 22px; height: 22px; }
 'use strict';
 
 const API_URL = 'api.php';
+const ME = <?= json_encode((string)auth_current_user(), JSON_HEX_TAG | JSON_HEX_AMP | JSON_UNESCAPED_UNICODE) ?>;
 const LS_KEY = 'tabellino_live_v1';
 const PTS = { try: 5, ptry: 7, conv: 2, pen: 3, drop: 3 };
 const SLOT_GROUPS = [[15], [14, 13, 12, 11], [10, 9], [8, 7, 6], [5, 4], [3, 2, 1]];
@@ -1314,6 +1267,20 @@ document.addEventListener('click', ev => {
 
     switch (b.dataset.do) {
         case 'toggleClock': toggleClock(); break;
+        case 'userMenu': {
+            const d = $('#dlg');
+            d.innerHTML = `<h3 style="margin:0 0 6px">Utente</h3>
+                <p class="hint" style="margin:0 0 14px">Collegato come <b>${esc(ME)}</b></p>
+                <div style="display:flex;flex-direction:column;gap:10px">
+                    <a class="btn" href="utenti.php" style="text-align:center;text-decoration:none;color:inherit">Utenti e password</a>
+                    <button class="btn dng" id="uLogout">Esci</button>
+                    <button class="btn" id="dNo">Chiudi</button>
+                </div>`;
+            $('#dlgOverlay').classList.add('on');
+            $('#dNo').onclick = closeDlg;
+            $('#uLogout').onclick = () => $('#logoutForm').submit();
+            break;
+        }
         case 'setClock': {
             const d = $('#dlg');
             d.innerHTML = `<h3 style="margin:0 0 12px">Cronometro</h3>
@@ -1425,12 +1392,6 @@ $('#importFile').addEventListener('change', ev => {
     const file = ev.target.files[0];
     if (file) importJsonFile(file);
     ev.target.value = '';
-});
-$('#fabToggle').addEventListener('click', () => $('#fab').classList.toggle('open'));
-$('#fabLogout').addEventListener('click', () => $('#logoutForm').submit());
-document.addEventListener('click', ev => {
-    const fab = $('#fab');
-    if (fab.classList.contains('open') && !fab.contains(ev.target)) fab.classList.remove('open');
 });
 
 setInterval(() => { renderBoard(); renderPending(); }, 1000);

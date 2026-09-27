@@ -4,7 +4,7 @@ Web app per telefono e tablet con cui si registrano, a bordo campo, gli eventi d
 
 Nasce per sostituire il foglio cartaceo: invece di mettere una crocetta sul punteggio, si tocca il numero del giocatore e l'app ricostruisce da sola marcatori con parziali, catene di sostituzioni, cartellini e percentuali dei calciatori.
 
-- Versione attuale: **v1.17**
+- Versione attuale: **v1.18**
 - Stack: HTML + JavaScript senza dipendenze, PHP 8.2+, SQLite
 - Funziona anche senza rete: i dati restano sul dispositivo e si inviano al server quando si vuole
 - Installazione con semplice copia dei file: utenti e password si creano dal browser
@@ -120,7 +120,7 @@ Copia la cartella in `C:\xampp\htdocs\tabellino\` e apri `http://localhost/tabel
 
 ## Configurare utenti e password
 
-Tutto si fa dal browser: il tasto **+** in basso a destra (visibile da qualsiasi scheda) si apre in un menu con **Utenti e password** (pagina `utenti.php`) ed **Esci**.
+Tutto si fa dal browser: il tasto **Utente**, il quinto della barra in basso (visibile da qualsiasi scheda), mostra con quale utente sei collegato e apre **Utenti e password** (pagina `utenti.php`) ed **Esci**.
 
 | Chi | Cosa può fare |
 |---|---|
@@ -526,6 +526,7 @@ La partita di prova può essere caricata al primo avvio, lasciando la spunta nel
 
 | Versione | Novità |
 |---|---|
+| **v1.18** | Il menu utente non è più un tasto **+** flottante sopra al contenuto: diventa il quinto tasto **Utente** della barra in basso, che apre un riquadro con l'utente collegato, **Utenti e password** ed **Esci**. Niente più tasti coperti dal cerchio flottante |
 | **v1.17** | Rosso da 20 minuti, separato dal rosso definitivo: nuovo tasto **Rosso 20’**, conto alla rovescia nella schermata Live e tasto **Fai entrare** per registrare chi prende il posto dell'espulso (anche un giocatore già sostituito). Nel tabellino il cartellino è scritto `rosso (20’)` e l'ingresso compare come un cambio sul ruolo dell'espulso. Formato proposto da noi: la FIR non ne ha ancora indicato uno |
 | **v1.16** | Tabellino più aderente al facsimile FIR: grassetto corsivo (non più solo grassetto) su Marcatori, p.t., s.t., all. e sulle etichette degli ufficiali di gara (Arb., AA1/AA2, quarto uomo, TMO), con il corsivo che si ferma prima dei due punti. Il testo copiato senza formattazione non cambia |
 | **v1.15** | Su hosting con una versione di SQLite molto datata (`pdo_sqlite` 3.7.x, prima del 2018), il salvataggio falliva sempre: la query usava una sintassi (`ON CONFLICT ... DO UPDATE`) introdotta solo nella SQLite 3.24 |
